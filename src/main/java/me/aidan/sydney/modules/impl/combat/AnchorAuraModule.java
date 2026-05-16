@@ -89,7 +89,7 @@ public class AnchorAuraModule extends Module {
                 interactBlock(anchorPos);
                 InventoryUtils.switchBack("Silent", gSlot, prev);
                 charges++;
-                if (charges >= 4) phase = Phase.DETONATE;
+                if (charges >= 1) phase = Phase.DETONATE;
             }
             case DETONATE -> {
                 if (anchorPos == null) { phase = Phase.DONE; return; }

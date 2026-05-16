@@ -1,7 +1,6 @@
 package me.aidan.sydney.modules.impl.core;
 
 import me.aidan.sydney.Sydney;
-import me.aidan.sydney.gui.hud.HudEditorScreen;
 import me.aidan.sydney.modules.Module;
 import me.aidan.sydney.modules.RegisterModule;
 import org.lwjgl.glfw.GLFW;
@@ -14,14 +13,15 @@ public class HudEditorModule extends Module {
             setToggled(false);
             return;
         }
-        Sydney.MODULE_MANAGER.getModule(HUDModule.class).initializeHudElements();
-        mc.setScreen(new HudEditorScreen());
+        HUDModule hud = Sydney.MODULE_MANAGER.getModule(HUDModule.class);
+        hud.initializeHudElements();
+        hud.editMode = true;
     }
 
     @Override
     public void onDisable() {
-        if (mc.currentScreen instanceof HudEditorScreen) {
-            mc.currentScreen.close();
-        }
+        HUDModule hud = Sydney.MODULE_MANAGER.getModule(HUDModule.class);
+        hud.editMode = false;
+        hud.draggedElement = null;
     }
 }

@@ -632,6 +632,47 @@ public class HUDModule extends Module {
             trackBox("direction", 0, 0, 0, 0);
         }
 
+        renderEditOverlay(event.getContext());
+    }
+
+    private void renderEditOverlay(DrawContext context) {
+        if (!editMode) return;
+
+        updateEditOverlay((float) getMouseX(), (float) getMouseY());
+
+        for (HudElement element : hudElements.values()) {
+            if (element.getWidth() <= 0 || element.getHeight() <= 0) continue;
+
+            int sx = element.getScreenX();
+            int sy = element.getScreenY();
+            int w = element.getWidth();
+            int h = element.getHeight();
+
+            boolean hovered = element.isHovering(getMouseX(), getMouseY());
+            boolean isDragged = draggedElement == element;
+
+            Color body = new Color(0, 0, 0, isDragged ? 80 : 60);
+            Color border = isDragged || hovered ? Color.WHITE : new Color(150, 150, 150, 120);
+
+            if (!element.isVisible()) {
+                Renderer2D.renderOutline(context.getMatrices(), sx - 2, sy - 2, sx + w + 2, sy + h + 2, new Color(255, 50, 50, 120));
+            } else {
+                Renderer2D.renderQuad(context.getMatrices(), sx - 2, sy - 2, sx + w + 2, sy + h + 2, body);
+                Renderer2D.renderOutline(context.getMatrices(), sx - 2, sy - 2, sx + w + 2, sy + h + 2, border);
+            }
+
+            String label = element.getName();
+            int labelY = sy - Sydney.FONT_MANAGER.getHeight() - 2;
+            if (labelY < 2) labelY = sy + h + 2;
+            Sydney.FONT_MANAGER.drawTextWithShadow(context, label, sx, labelY, hovered || isDragged ? Color.WHITE : new Color(180, 180, 180));
+
+            if (isDragged) {
+                int nx = Math.round((float) (getMouseX() - (sx - element.getOffsetX() - 2)) / 10) * 10 + element.getOffsetX();
+                int ny = Math.round((float) (getMouseY() - (sy - element.getOffsetY() - 2)) / 10) * 10 + element.getOffsetY();
+                String pos = "\u00a77" + nx + ", " + ny;
+                Sydney.FONT_MANAGER.drawTextWithShadow(context, pos, sx, sy + h + 4, Color.GRAY);
+            }
+        }
     }
 
     private void drawModuleText(Module module, DrawContext context, String text, float x, float y) {
