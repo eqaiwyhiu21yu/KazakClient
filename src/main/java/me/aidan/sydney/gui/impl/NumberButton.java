@@ -6,7 +6,6 @@ import me.aidan.sydney.gui.api.Button;
 import me.aidan.sydney.gui.api.Frame;
 import me.aidan.sydney.settings.impl.NumberSetting;
 import me.aidan.sydney.utils.chat.ChatUtils;
-import me.aidan.sydney.utils.color.ColorUtils;
 import me.aidan.sydney.utils.graphics.Renderer2D;
 import me.aidan.sydney.utils.system.MathUtils;
 import net.minecraft.client.MinecraftClient;
@@ -30,8 +29,8 @@ public class NumberButton extends Button {
 
     @Override
     public void render(DrawContext context, int mouseX, int mouseY, float delta) {
-        double slider, sliderMax = getWidth() - 2 - getPadding()*2;
-        double drag = Math.min(sliderMax, Math.max(0, mouseX - getX() - 1 - getPadding()));
+        double slider, sliderMax = getWidth() - 14;
+        double drag = Math.min(sliderMax, Math.max(0, mouseX - getX() - 7));
 
         if(setting.getType() == NumberSetting.Type.INTEGER) {
             slider = sliderMax * (setting.getValue().intValue() - setting.getMinimum().intValue()) / (setting.getMaximum().intValue() - setting.getMinimum().intValue());
@@ -59,11 +58,21 @@ public class NumberButton extends Button {
             }
         }
 
-        Renderer2D.renderQuad(context.getMatrices(), getX() + getPadding() + 1, getY(), getX() + getPadding() + 1 + (float) slider, getY() + getHeight() - 1, ClickGuiScreen.getButtonColor(getY(), 100));
-        Renderer2D.renderQuad(context.getMatrices(), getX() + getPadding() + 1, getY(), getX() + getPadding() + 2, getY() + getHeight() - 1, ClickGuiScreen.getButtonColor(getY(), 255));
+        int sliderY = getY() + getHeight() - 4;
+        int sliderH = 2;
+        Renderer2D.renderBorderedRect(context.getMatrices(), getX() + 6, sliderY, getX() + 6 + (int)sliderMax, sliderY + sliderH, new Color(30, 30, 30, 200), new Color(0, 0, 0, 100));
+        Renderer2D.renderQuad(context.getMatrices(), getX() + 6, sliderY, getX() + 6 + (int)slider, sliderY + sliderH, ClickGuiScreen.getButtonColor(getY(), 200));
 
-        Sydney.FONT_MANAGER.drawTextWithShadow(context, listening ? (currentString + (selecting ? "" : Sydney.CLICK_GUI.isShowLine() ? "|" : "")) : setting.getTag(), getX() + getTextPadding() + 1, getY() + 2, Color.WHITE);
-        if(!listening) Sydney.FONT_MANAGER.drawTextWithShadow(context, Formatting.GRAY + "" + setting.getValue(), getX()+ getWidth() - getTextPadding() - 1 - Sydney.FONT_MANAGER.getWidth(setting.getValue() + ""), getY() + 2, Color.WHITE);
+        String display = listening ? (currentString + (selecting ? "" : Sydney.CLICK_GUI.isShowLine() ? "|" : "")) : setting.getTag() + " " + Formatting.GRAY + setting.getValue();
+        int maxTextWidth = (int)sliderMax;
+        if (Sydney.FONT_MANAGER.getWidth(display) > maxTextWidth && maxTextWidth > 20) {
+            while (Sydney.FONT_MANAGER.getWidth(display + "...") > maxTextWidth && display.length() > 1) {
+                display = display.substring(0, display.length() - 1);
+            }
+            display += "...";
+        }
+        int textColor = setting.getTag().equals(display.split(" ")[0]) ? 0xFFFFFFFF : 0xFFCCCCCC;
+        Sydney.FONT_MANAGER.drawTextWithShadow(context, display, getX() + 4, getY() + 2, new Color(textColor, true));
     }
 
     @Override

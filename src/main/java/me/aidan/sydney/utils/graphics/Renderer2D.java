@@ -178,6 +178,11 @@ public class Renderer2D implements IMinecraft {
         RenderSystem.disableBlend();
     }
 
+    public static void renderBorderedRect(MatrixStack matrices, float left, float top, float right, float bottom, Color fill, Color border) {
+        renderQuad(matrices, left, top, right, bottom, fill);
+        renderOutline(matrices, left, top, right, bottom, border);
+    }
+
     public static void renderCircle(MatrixStack matrices, float x, float y, float radius, Color color) {
         BufferBuilder buffer = RenderSystem.renderThreadTesselator().begin(VertexFormat.DrawMode.TRIANGLE_FAN, VertexFormats.POSITION_COLOR);
 

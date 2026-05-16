@@ -39,7 +39,7 @@ import java.util.Set;
 @RegisterModule(name = "Surround", description = "Automatically places blocks at your feet to prevent crystal damage.", category = Module.Category.COMBAT)
 public class SurroundModule extends Module {
     public ModeSetting autoSwitch = new ModeSetting("Switch", "The mode that will be used for automatically switching to necessary items.", "Silent", InventoryUtils.SWITCH_MODES);
-    public ModeSetting timing = new ModeSetting("Timing", "The timing that will be used in replacing broken surround blocks.", "Sequential", new String[]{"Vanilla", "Sequential"});
+    public ModeSetting timing = new ModeSetting("Timing", "The timing that will be used in replacing broken surround blocks.", "NCP", new String[]{"Vanilla", "Sequential", "NCP", "Grim"});
     public NumberSetting limit = new NumberSetting("Limit", "The maximum number of blocks that can be placed each group.", 4, 1, 20);
     public NumberSetting delay = new NumberSetting("Delay", "The delay in ticks between each group of placements.", 0, 0, 20);
     public NumberSetting range = new NumberSetting("Range", "The maximum range at which the blocks will be placed at.", 5.0, 0.0, 12.0);
@@ -66,6 +66,7 @@ public class SurroundModule extends Module {
 
     private int ticks = 0;
     private int blocksPlaced = 0;
+    private int effectiveLimit = 0;
 
     @Override
     public void onEnable() {
@@ -95,7 +96,8 @@ public class SurroundModule extends Module {
         if (!whileEating.getValue() && mc.player.isUsingItem()) return;
         blocksPlaced = 0;
 
-        if (ticks < delay.getValue().intValue()) {
+        int effectiveDelay = timing.getValue().equalsIgnoreCase("Grim") ? Math.max(delay.getValue().intValue(), 1) : timing.getValue().equalsIgnoreCase("NCP") ? 0 : delay.getValue().intValue();
+        if (ticks < effectiveDelay) {
             ticks++;
             return;
         }
@@ -137,9 +139,11 @@ public class SurroundModule extends Module {
 
         InventoryUtils.switchSlot(autoSwitch.getValue(), slot, previousSlot);
 
+        effectiveLimit = timing.getValue().equalsIgnoreCase("Grim") ? Math.min(limit.getValue().intValue(), 2) : timing.getValue().equalsIgnoreCase("NCP") ? 20 : limit.getValue().intValue();
+
         List<BlockPos> placedPositions = new ArrayList<>();
         for (BlockPos position : positions) {
-            if (blocksPlaced >= limit.getValue().intValue()) break;
+            if (blocksPlaced >= effectiveLimit) break;
 
             Direction direction = WorldUtils.getDirection(position, placedPositions, strictDirection.getValue());
             if (direction == null) {
@@ -182,7 +186,7 @@ public class SurroundModule extends Module {
             for (BlockPos position : targetPositions) {
                 if (new Box(position).intersects(crystal.getBoundingBox()) && targetPositions.contains(position)) {
 
-                    if (blocksPlaced > limit.getValue().intValue()) return;
+                    if (blocksPlaced > effectiveLimit) return;
                     if (!whileEating.getValue() && mc.player.isUsingItem()) return;
 
                     int slot = InventoryUtils.findHardestBlock(0, autoSwitch.getValue().equalsIgnoreCase("AltSwap") || autoSwitch.getValue().equalsIgnoreCase("AltPickup") ? 35 : 8);

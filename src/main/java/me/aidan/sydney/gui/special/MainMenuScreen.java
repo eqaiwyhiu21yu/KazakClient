@@ -57,7 +57,7 @@ public class MainMenuScreen extends Screen implements IMinecraft {
         }
 
         // Watermark
-        drawText(context, Formatting.WHITE + "Syd" + Formatting.RESET + "ney", width/2f - Sydney.FONT_MANAGER.getWidth("Sydney"), height/2f - Sydney.FONT_MANAGER.getHeight()*2 - 5, 2, ColorUtils.getRainbow(2L, 0.7f, 1.0f, 255, width/2*5L));
+        drawText(context, Formatting.WHITE + "Kazak" + Formatting.RESET + " Client", width/2f - Sydney.FONT_MANAGER.getWidth("Kazak Client"), height/2f - Sydney.FONT_MANAGER.getHeight()*2 - 5, 2, ColorUtils.getRainbow(2L, 0.7f, 1.0f, 255, width/2*5L));
 
         // Time
         String date = new SimpleDateFormat("MM/dd/yy").format(new Date()) + " " + new SimpleDateFormat("hh:mm aa").format(new Date());
@@ -80,7 +80,7 @@ public class MainMenuScreen extends Screen implements IMinecraft {
 
     public boolean mouseClicked(double mouseX, double mouseY, int button) {
         if(button == 0) {
-            if(width/2f - Sydney.FONT_MANAGER.getWidth("Sydney") <= mouseX && height/2f - Sydney.FONT_MANAGER.getHeight()*2 - 5 <= mouseY && width/2f + Sydney.FONT_MANAGER.getWidth("Sydney") > mouseX && height/2f - 5 > mouseY) {
+            if(width/2f - Sydney.FONT_MANAGER.getWidth("Kazak Client") <= mouseX && height/2f - Sydney.FONT_MANAGER.getHeight()*2 - 5 <= mouseY && width/2f + Sydney.FONT_MANAGER.getWidth("Kazak Client") > mouseX && height/2f - 5 > mouseY) {
                 try {
                     Util.getOperatingSystem().open(new URI("https://youtu.be/INE4RacaApQ?si=ShQU8VjfpgdxW8nb"));
                 } catch (Exception ignored) { }
@@ -115,25 +115,25 @@ public class MainMenuScreen extends Screen implements IMinecraft {
         Color color = Color.WHITE;
 
         if (Sydney.UPDATE_STATUS.equalsIgnoreCase("update-available")) {
-            secondaryText = "An update is available for Sydney.";
+            secondaryText = "An update is available for Kazak Client.";
             primaryText = "Please restart the game to apply changes.";
             color = Color.ORANGE;
         }
 
         if (Sydney.UPDATE_STATUS.equalsIgnoreCase("failed-connection")) {
-            secondaryText = "Failed to connect to Sydney's servers.";
+            secondaryText = "Failed to connect to Kazak Client's servers.";
             primaryText = "Please make sure you have a working internet connection.";
             color = Color.RED;
         }
 
         if (Sydney.UPDATE_STATUS.equalsIgnoreCase("failed")) {
-            secondaryText = "Failed to update Sydney.";
+            secondaryText = "Failed to update Kazak Client.";
             primaryText = "Please make sure the auto-updater is working properly.";
             color = Color.RED;
         }
 
         if (Sydney.UPDATE_STATUS.equalsIgnoreCase("up-to-date")) {
-            primaryText = "Sydney is on the latest version.";
+            primaryText = "Kazak Client is on the latest version.";
         }
 
         if (primaryText.isEmpty()) return;

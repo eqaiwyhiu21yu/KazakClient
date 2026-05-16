@@ -2,8 +2,10 @@ package me.aidan.sydney.modules.impl.core;
 
 import me.aidan.sydney.Sydney;
 import me.aidan.sydney.events.SubscribeEvent;
+import me.aidan.sydney.events.impl.MouseInputEvent;
 import me.aidan.sydney.events.impl.RenderOverlayEvent;
 import me.aidan.sydney.events.impl.TickEvent;
+import me.aidan.sydney.gui.hud.HudElement;
 import me.aidan.sydney.modules.Module;
 import me.aidan.sydney.modules.RegisterModule;
 import me.aidan.sydney.settings.impl.*;
@@ -37,7 +39,9 @@ import java.awt.*;
 import java.text.DecimalFormat;
 import java.util.ArrayList;
 import java.util.Comparator;
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
 
 @RegisterModule(name = "HUD", description = "Renders information about the game and the client on the screen.", category = Module.Category.CORE, toggled = true, drawn = false)
 public class HUDModule extends Module {
@@ -121,6 +125,50 @@ public class HUDModule extends Module {
     private List<ModuleEntry> moduleEntries = new ArrayList<>();
     private List<PlayerEntry> playerEntries = new ArrayList<>();
     private List<PotionEntry> potionEntries = new ArrayList<>();
+
+    private final Map<String, HudElement> hudElements = new LinkedHashMap<>();
+    private boolean hudElementsInitialized = false;
+
+    public Map<String, HudElement> getHudElements() {
+        checkHudInit();
+        return hudElements;
+    }
+
+    public void initializeHudElements() {
+        if (hudElementsInitialized) return;
+        hudElementsInitialized = true;
+        hudElements.clear();
+
+        hudElements.put("watermark", new HudElement("watermark", "Watermark"));
+        hudElements.put("uptime", new HudElement("uptime", "Uptime"));
+        hudElements.put("welcomer", new HudElement("welcomer", "Welcomer"));
+        hudElements.put("moduleList", new HudElement("moduleList", "Module List"));
+        hudElements.put("playerRadar", new HudElement("playerRadar", "Player Radar"));
+        hudElements.put("armor", new HudElement("armor", "Armor"));
+        hudElements.put("totemCounter", new HudElement("totemCounter", "Totem Counter"));
+        hudElements.put("xpCounter", new HudElement("xpCounter", "XP Counter"));
+        hudElements.put("crystalCounter", new HudElement("crystalCounter", "Crystal Counter"));
+        hudElements.put("potions", new HudElement("potions", "Potions"));
+        hudElements.put("health", new HudElement("health", "Health"));
+        hudElements.put("information", new HudElement("information", "Information"));
+        hudElements.put("coordinates", new HudElement("coordinates", "Coordinates"));
+        hudElements.put("direction", new HudElement("direction", "Direction"));
+        hudElements.put("backgroundBar", new HudElement("backgroundBar", "Background Bar"));
+    }
+
+    private void checkHudInit() {
+        if (!hudElementsInitialized) initializeHudElements();
+    }
+
+    private void trackBox(String key, int x, int y, int w, int h) {
+        HudElement e = hudElements.get(key);
+        if (e != null) {
+            e.setScreenX(x);
+            e.setScreenY(y);
+            e.setWidth(w);
+            e.setHeight(h);
+        }
+    }
 
     @SubscribeEvent
     public void onTick(TickEvent event) {
@@ -209,24 +257,56 @@ public class HUDModule extends Module {
     @SubscribeEvent
     public void renderWatermark(RenderOverlayEvent event) {
         if (mc.player == null) return;
+        checkHudInit();
 
         chatOffset = chatAnimation.get(mc.currentScreen instanceof ChatScreen ? 14 : 0);
 
-        Renderer2D.renderQuad(event.getMatrices(), 2, mc.getWindow().getScaledHeight() - chatOffset, mc.getWindow().getScaledWidth() - 2, mc.getWindow().getScaledHeight() + 12 - chatOffset, new Color(0, 0, 0, (int) (mc.options.getTextBackgroundOpacity().getValue() * 255)));
+        HudElement barElem = hudElements.get("backgroundBar");
+        int barX = 2 + barElem.getOffsetX();
+        int barY = (int)(mc.getWindow().getScaledHeight() - chatOffset) + barElem.getOffsetY();
+        int barW = mc.getWindow().getScaledWidth() - 4;
+        int barH = 12;
+        Renderer2D.renderQuad(event.getMatrices(), barX, barY, barX + barW, barY + barH, new Color(0, 0, 0, (int) (mc.options.getTextBackgroundOpacity().getValue() * 255)));
+        trackBox("backgroundBar", barX, barY, barW, barH);
 
+        HudElement wmElem = hudElements.get("watermark");
         if (watermark.getValue()) {
             String text = watermarkText.getValue() + (watermarkVersion.getValue() ? (watermarkSync.getValue() ? "" : inversion.getValue() ? Formatting.GRAY : Formatting.WHITE) + " " + Sydney.MOD_VERSION + (watermarkMinecraftVersion.getValue() ? "-mc" + Sydney.MINECRAFT_VERSION : "") + (watermarkRevision.getValue() ? "+" + Sydney.GIT_REVISION + "." + Sydney.GIT_HASH : "") : "");
-            drawText(event.getContext(), text, 2, 2);
+            int textW = Sydney.FONT_MANAGER.getWidth(text);
+            int textH = Sydney.FONT_MANAGER.getHeight();
+            int x = 2 + wmElem.getOffsetX();
+            int y = 2 + wmElem.getOffsetY();
+            drawText(event.getContext(), text, x, y);
+            trackBox("watermark", x, y, textW, textH);
+        } else {
+            trackBox("watermark", 0, 0, 0, 0);
         }
 
+        HudElement upElem = hudElements.get("uptime");
         if(uptime.getValue()) {
             String[] hms = FormattingUtils.formatSeconds((System.currentTimeMillis() - Sydney.UPTIME)/1000);
-            drawText(event.getContext(), "Uptime " + Formatting.WHITE + hms[0] + ":" + hms[1] + ":" + hms[2], 2, 2 + (watermark.getValue() ? Sydney.FONT_MANAGER.getHeight() : 0), informationSync.getValue() ? null : new Color(170, 170, 170));
+            String text = "Uptime " + Formatting.WHITE + hms[0] + ":" + hms[1] + ":" + hms[2];
+            int textW = Sydney.FONT_MANAGER.getWidth(text);
+            int textH = Sydney.FONT_MANAGER.getHeight();
+            int x = 2 + upElem.getOffsetX();
+            int y = 2 + (watermark.getValue() ? textH : 0) + upElem.getOffsetY();
+            drawText(event.getContext(), text, x, y, informationSync.getValue() ? null : new Color(170, 170, 170));
+            trackBox("uptime", x, y, textW, textH);
+        } else {
+            trackBox("uptime", 0, 0, 0, 0);
         }
 
+        HudElement wlElem = hudElements.get("welcomer");
         if (welcomer.getValue()) {
             String text = welcomerText.getValue().replace("[username]", (welcomerSync.getValue() ? "" : inversion.getValue() ? Formatting.GRAY : Formatting.WHITE) + mc.player.getName().getString() + Formatting.RESET);
-            drawText(event.getContext(), text, mc.getWindow().getScaledWidth() / 2.0f - Sydney.FONT_MANAGER.getWidth(text) / 2.0f, 6);
+            int textW = Sydney.FONT_MANAGER.getWidth(text);
+            int textH = Sydney.FONT_MANAGER.getHeight();
+            int x = (int)(mc.getWindow().getScaledWidth() / 2.0f - textW / 2.0f) + wlElem.getOffsetX();
+            int y = 6 + wlElem.getOffsetY();
+            drawText(event.getContext(), text, x, y);
+            trackBox("welcomer", x, y, textW, textH);
+        } else {
+            trackBox("welcomer", 0, 0, 0, 0);
         }
     }
 
@@ -235,15 +315,29 @@ public class HUDModule extends Module {
         if (mc.player == null || mc.world == null) return;
         if (!moduleList.getValue()) return;
 
+        HudElement elem = hudElements.get("moduleList");
         float potionOffset = potionsAnimation.get(!vanillaPotions.getValue().equalsIgnoreCase("Move") || mc.player.getStatusEffects().isEmpty() ? 0 : (EntityUtils.hasNegativeEffects(mc.player) ? 51 : 25));
 
         int index = 0;
+        int maxW = 0;
+        int startY = 0;
         for (ModuleEntry entry : moduleEntries) {
-            float x = mc.getWindow().getScaledWidth() - (entry.module().getAnimationOffset().get(entry.module().isToggled() ? Sydney.FONT_MANAGER.getWidth(entry.text()) + 2 : 0));
-            float y = 2 + potionOffset + (index * Sydney.FONT_MANAGER.getHeight());
+            float x = mc.getWindow().getScaledWidth() - (entry.module().getAnimationOffset().get(entry.module().isToggled() ? Sydney.FONT_MANAGER.getWidth(entry.text()) + 2 : 0)) + elem.getOffsetX();
+            float y = 2 + potionOffset + (index * Sydney.FONT_MANAGER.getHeight()) + elem.getOffsetY();
 
             drawModuleText(entry.module(), event.getContext(), entry.text(), x, y);
+            if (index == 0) startY = (int) y;
+            maxW = Math.max(maxW, Sydney.FONT_MANAGER.getWidth(entry.text()));
             index++;
+        }
+
+        if (index > 0) {
+            int boxW = maxW + 2;
+            int boxH = index * Sydney.FONT_MANAGER.getHeight();
+            int boxX = mc.getWindow().getScaledWidth() - boxW - 2 + elem.getOffsetX();
+            trackBox("moduleList", boxX, startY, boxW, boxH);
+        } else {
+            trackBox("moduleList", 0, 0, 0, 0);
         }
     }
 
@@ -251,12 +345,27 @@ public class HUDModule extends Module {
     public void renderPlayerRadar(RenderOverlayEvent event) {
         if (!playerRadar.getValue()) return;
 
+        HudElement elem = hudElements.get("playerRadar");
         int offset = 0;
+        int maxW = 0;
+        int startY = 2 + (Sydney.FONT_MANAGER.getHeight() * 2);
         for (PlayerEntry entry : playerEntries) {
-            if (entry.headTexture() != null) PlayerSkinDrawer.draw(event.getContext(), entry.headTexture(), 2, 1 + (Sydney.FONT_MANAGER.getHeight() * 2) + ((Sydney.FONT_MANAGER.getHeight() + 1) * offset), Sydney.FONT_MANAGER.getHeight(), true, false, Color.WHITE.getRGB());
-            drawText(event.getContext(), entry.text(), 2 + (entry.headTexture() != null ? Sydney.FONT_MANAGER.getHeight() + 2 : 0), 2 + (Sydney.FONT_MANAGER.getHeight() * 2) + ((Sydney.FONT_MANAGER.getHeight() + 1) * offset), Sydney.FRIEND_MANAGER.contains(entry.player().getName().getString()) ? Sydney.FRIEND_MANAGER.getDefaultFriendColor() : null);
+            int x = 2 + (entry.headTexture() != null ? Sydney.FONT_MANAGER.getHeight() + 2 : 0) + elem.getOffsetX();
+            int y = 2 + (Sydney.FONT_MANAGER.getHeight() * 2) + ((Sydney.FONT_MANAGER.getHeight() + 1) * offset) + elem.getOffsetY();
 
+            if (entry.headTexture() != null) PlayerSkinDrawer.draw(event.getContext(), entry.headTexture(), 2 + elem.getOffsetX(), 1 + (Sydney.FONT_MANAGER.getHeight() * 2) + ((Sydney.FONT_MANAGER.getHeight() + 1) * offset) + elem.getOffsetY(), Sydney.FONT_MANAGER.getHeight(), true, false, Color.WHITE.getRGB());
+            drawText(event.getContext(), entry.text(), x, y, Sydney.FRIEND_MANAGER.contains(entry.player().getName().getString()) ? Sydney.FRIEND_MANAGER.getDefaultFriendColor() : null);
+
+            maxW = Math.max(maxW, Sydney.FONT_MANAGER.getWidth(entry.text()));
             offset++;
+        }
+
+        if (offset > 0) {
+            int boxW = maxW + (playerEntries.getFirst().headTexture() != null ? Sydney.FONT_MANAGER.getHeight() + 2 : 0);
+            int boxH = offset * (Sydney.FONT_MANAGER.getHeight() + 1);
+            trackBox("playerRadar", 1 + elem.getOffsetX(), startY + elem.getOffsetY(), boxW, boxH);
+        } else {
+            trackBox("playerRadar", 0, 0, 0, 0);
         }
     }
 
@@ -266,15 +375,18 @@ public class HUDModule extends Module {
 
         MatrixStack matrices = event.getMatrices();
 
+        HudElement armorElem = hudElements.get("armor");
         if (armor.getValue()) {
             int offset = 0;
+            int itemY = 0;
             for (ItemStack stack : mc.player.getArmorItems()) {
                 if (stack.isEmpty()) continue;
 
                 int wateroffset = (mc.player.isSubmergedInWater() || mc.player.getAir() < mc.player.getMaxAir()) ? 10 : 0;
+                itemY = mc.getWindow().getScaledHeight() - 55 - wateroffset;
 
-                int x = mc.getWindow().getScaledWidth() / 2 + 69 - (18 * offset);
-                int y = mc.getWindow().getScaledHeight() - 55 - wateroffset;
+                int x = mc.getWindow().getScaledWidth() / 2 + 69 - (18 * offset) + armorElem.getOffsetX();
+                int y = itemY + armorElem.getOffsetY();
 
                 event.getContext().drawItem(stack, x, y);
                 event.getContext().drawStackOverlay(mc.textRenderer, stack, x, y);
@@ -285,33 +397,47 @@ public class HUDModule extends Module {
                 if (armorDurability.getValue().equalsIgnoreCase("Percentage") || armorDurability.getValue().equalsIgnoreCase("Both") && maxDamage > 0) {
                     matrices.push();
                     matrices.scale(0.625f, 0.625f, 0.625f);
-                    drawText(event.getContext(), (((maxDamage - damage) * 100) / maxDamage) + "%", (int) (((mc.getWindow().getScaledWidth() >> 1) + 70 - (18 * offset)) * 1.6F), (int) ((mc.getWindow().getScaledHeight() - 58 - wateroffset) * 1.6F - 5), false, new Color(1.0f - ((maxDamage - damage) / (float) maxDamage), (maxDamage - damage) / (float) maxDamage, 0));
+                    drawText(event.getContext(), (((maxDamage - damage) * 100) / maxDamage) + "%", (int) (((mc.getWindow().getScaledWidth() >> 1) + 70 - (18 * offset)) * 1.6F + armorElem.getOffsetX() * 1.6F), (int) ((itemY - 3) * 1.6F + armorElem.getOffsetY() * 1.6F - 5), false, new Color(1.0f - ((maxDamage - damage) / (float) maxDamage), (maxDamage - damage) / (float) maxDamage, 0));
                     matrices.pop();
                 }
 
                 offset++;
             }
+            int slots = 0;
+            for (ItemStack s : mc.player.getArmorItems()) { if (!s.isEmpty()) slots++; }
+            int boxW = slots * 18;
+            int boxX = mc.getWindow().getScaledWidth() / 2 + 69 - (18 * slots) + armorElem.getOffsetX();
+            trackBox("armor", boxX, itemY + armorElem.getOffsetY(), boxW, 18);
+        } else {
+            trackBox("armor", 0, 0, 0, 0);
         }
 
+        HudElement totemElem = hudElements.get("totemCounter");
         if (totemCounter.getValue()) {
             int totems = mc.player.getInventory().count(Items.TOTEM_OF_UNDYING);
             if (totems > 0) {
                 ItemStack stack = new ItemStack(Items.TOTEM_OF_UNDYING);
-                int x = (mc.getWindow().getScaledWidth() / 2) - 9;
-                int y = mc.getWindow().getScaledHeight() - 55 - ((mc.player.isSubmergedInWater() && mc.interactionManager.getCurrentGameMode() != GameMode.CREATIVE) ? 10 : 0);
+                int x = (mc.getWindow().getScaledWidth() / 2) - 9 + totemElem.getOffsetX();
+                int y = mc.getWindow().getScaledHeight() - 55 - ((mc.player.isSubmergedInWater() && mc.interactionManager.getCurrentGameMode() != GameMode.CREATIVE) ? 10 : 0) + totemElem.getOffsetY();
 
                 event.getContext().drawItem(stack, x, y);
                 event.getContext().drawStackOverlay(mc.textRenderer, stack, x, y, String.valueOf(totems));
+                trackBox("totemCounter", x, y, 18, 18);
+            } else {
+                trackBox("totemCounter", 0, 0, 0, 0);
             }
+        } else {
+            trackBox("totemCounter", 0, 0, 0, 0);
         }
 
+        HudElement xpElem = hudElements.get("xpCounter");
         boolean renderedXpCounter = false;
         if (xpCounter.getValue()) {
             int experienceBottles = mc.player.getInventory().count(Items.EXPERIENCE_BOTTLE);
             if (experienceBottles > 0) {
                 ItemStack stack = new ItemStack(Items.EXPERIENCE_BOTTLE);
-                float x = (mc.getWindow().getScaledWidth() / 2) + 106;
-                float y = mc.getWindow().getScaledHeight() - 20 - (counterChatOffset.getValue() ? chatOffset : 0);
+                float x = (mc.getWindow().getScaledWidth() / 2) + 106 + xpElem.getOffsetX();
+                float y = mc.getWindow().getScaledHeight() - 20 - (counterChatOffset.getValue() ? chatOffset : 0) + xpElem.getOffsetY();
 
                 matrices.push();
                 matrices.translate(x, y, 0);
@@ -320,22 +446,33 @@ public class HUDModule extends Module {
                 matrices.pop();
 
                 renderedXpCounter = true;
+                trackBox("xpCounter", (int) x, (int) y, 18, 18);
+            } else {
+                trackBox("xpCounter", 0, 0, 0, 0);
             }
+        } else {
+            trackBox("xpCounter", 0, 0, 0, 0);
         }
 
+        HudElement crystalElem = hudElements.get("crystalCounter");
         if (crystalCounter.getValue()) {
             int crystals = mc.player.getInventory().count(Items.END_CRYSTAL);
             if (crystals > 0) {
                 ItemStack stack = new ItemStack(Items.END_CRYSTAL);
-                float x = (mc.getWindow().getScaledWidth() / 2) + 106;
-                float y = mc.getWindow().getScaledHeight() - (renderedXpCounter ? 40 : 20) - (counterChatOffset.getValue() ? chatOffset : 0);
+                float x = (mc.getWindow().getScaledWidth() / 2) + 106 + crystalElem.getOffsetX();
+                float y = mc.getWindow().getScaledHeight() - (renderedXpCounter ? 40 : 20) - (counterChatOffset.getValue() ? chatOffset : 0) + crystalElem.getOffsetY();
 
                 matrices.push();
                 matrices.translate(x, y, 0);
                 event.getContext().drawItem(stack, 0, 0);
                 event.getContext().drawStackOverlay(mc.textRenderer, stack, 0, 0, String.valueOf(crystals));
                 matrices.pop();
+                trackBox("crystalCounter", (int) x, (int) y, 18, 18);
+            } else {
+                trackBox("crystalCounter", 0, 0, 0, 0);
             }
+        } else {
+            trackBox("crystalCounter", 0, 0, 0, 0);
         }
     }
 
@@ -349,25 +486,58 @@ public class HUDModule extends Module {
 
         float chatOffset = informationChatOffset.getValue() ? this.chatOffset : 0;
 
+        HudElement healthElem = hudElements.get("health");
         if (health.getValue()) {
             String text = ColorUtils.getHealthColor(mc.player.getHealth() + mc.player.getAbsorptionAmount()) + new DecimalFormat("0").format(mc.player.getHealth() + mc.player.getAbsorptionAmount());
-            Sydney.FONT_MANAGER.drawTextWithOutline(event.getContext(), text, mc.getWindow().getScaledWidth() / 2 - Sydney.FONT_MANAGER.getWidth(text) / 2, mc.getWindow().getScaledHeight() / 2 + 16, Color.WHITE, Color.BLACK);
+            int textW = Sydney.FONT_MANAGER.getWidth(text);
+            int textH = Sydney.FONT_MANAGER.getHeight();
+            int x = mc.getWindow().getScaledWidth() / 2 - textW / 2 + healthElem.getOffsetX();
+            int y = mc.getWindow().getScaledHeight() / 2 + 16 + healthElem.getOffsetY();
+            Sydney.FONT_MANAGER.drawTextWithOutline(event.getContext(), text, x, y, Color.WHITE, Color.BLACK);
+            trackBox("health", x, y, textW, textH);
+        } else {
+            trackBox("health", 0, 0, 0, 0);
         }
 
+        HudElement potionElem = hudElements.get("potions");
         if (potions.getValue()) {
+            int minX = mc.getWindow().getScaledWidth();
+            int minY = mc.getWindow().getScaledHeight();
+            int maxX = 0;
+            int maxY = 0;
+
             for (PotionEntry entry : potionEntries) {
+                int potX = mc.getWindow().getScaledWidth() - 2 - Sydney.FONT_MANAGER.getWidth(entry.text()) + potionElem.getOffsetX();
+                int potY = (int)(mc.getWindow().getScaledHeight() - chatOffset - 2 - Sydney.FONT_MANAGER.getHeight() - (Sydney.FONT_MANAGER.getHeight() * offset)) + potionElem.getOffsetY();
+
                 if (entry.sprite() != null) {
                     matrices.push();
-                    matrices.translate(mc.getWindow().getScaledWidth() - 2 - Sydney.FONT_MANAGER.getWidth(entry.text()) - Sydney.FONT_MANAGER.getHeight() - 2, mc.getWindow().getScaledHeight() - chatOffset - 2 - Sydney.FONT_MANAGER.getHeight() - (Sydney.FONT_MANAGER.getHeight() * offset) - 1, 0);
+                    matrices.translate(potX - Sydney.FONT_MANAGER.getHeight() - 2, potY - 1, 0);
                     event.getContext().drawSpriteStretched(RenderLayer::getGuiTextured, entry.sprite(), 0, 0, Sydney.FONT_MANAGER.getHeight(), Sydney.FONT_MANAGER.getHeight());
                     matrices.pop();
                 }
 
-                drawText(event.getContext(), entry.text(), mc.getWindow().getScaledWidth() - 2 - Sydney.FONT_MANAGER.getWidth(entry.text()), mc.getWindow().getScaledHeight() - chatOffset - 2 - Sydney.FONT_MANAGER.getHeight() - (Sydney.FONT_MANAGER.getHeight() * offset), potionColor.getValue().equals("Client") && colorMode.getValue().equals("Rainbow") && rainbowMode.getValue().equals("Horizontal"), entry.color());
+                drawText(event.getContext(), entry.text(), potX, potY, potionColor.getValue().equals("Client") && colorMode.getValue().equals("Rainbow") && rainbowMode.getValue().equals("Horizontal"), entry.color());
+
+                minX = Math.min(minX, potX);
+                minY = Math.min(minY, potY);
+                maxX = Math.max(maxX, potX + Sydney.FONT_MANAGER.getWidth(entry.text()));
+                maxY = Math.max(maxY, potY + Sydney.FONT_MANAGER.getHeight());
                 offset++;
             }
+
+            if (offset > 0) {
+                int boxX = minX;
+                int boxY = minY;
+                trackBox("potions", boxX, boxY, maxX - boxX, maxY - boxY);
+            } else {
+                trackBox("potions", 0, 0, 0, 0);
+            }
+        } else {
+            trackBox("potions", 0, 0, 0, 0);
         }
 
+        HudElement infoElem = hudElements.get("information");
         List<String> informationEntries = new ArrayList<>();
 
         if (ping.getValue()) informationEntries.add(getPrimary() + "Ping " + getSecondary() + Sydney.SERVER_MANAGER.getPing() + "ms");
@@ -381,21 +551,52 @@ public class HUDModule extends Module {
 
         if (!informationEntries.isEmpty()) {
             informationEntries.sort(Comparator.comparingInt(Sydney.FONT_MANAGER::getWidth).reversed());
+
+            int infoMinX = mc.getWindow().getScaledWidth();
+            int infoMinY = mc.getWindow().getScaledHeight();
+            int infoMaxX = 0;
+            int infoMaxY = 0;
+
             for (String text : informationEntries) {
                 if (text.startsWith("Durability")) {
                     if (mc.player.getMainHandStack().isDamageable()) {
                         int maxDamage = mc.player.getMainHandStack().getMaxDamage(), damage = mc.player.getMainHandStack().getDamage();
                         String s = String.valueOf(maxDamage - damage);
 
-                        drawText(event.getContext(), getPrimary() + "Durability ", mc.getWindow().getScaledWidth() - 2 - Sydney.FONT_MANAGER.getWidth("Durability ") - Sydney.FONT_MANAGER.getWidth(s), mc.getWindow().getScaledHeight() - chatOffset - 2 - Sydney.FONT_MANAGER.getHeight() + (offset * -Sydney.FONT_MANAGER.getHeight()), informationSync.getValue() ? null : new Color(170, 170, 170));
-                        drawText(event.getContext(), s, mc.getWindow().getScaledWidth() - 2 - Sydney.FONT_MANAGER.getWidth(s), mc.getWindow().getScaledHeight() - chatOffset - 2 - Sydney.FONT_MANAGER.getHeight() + (offset * -Sydney.FONT_MANAGER.getHeight()), false, new Color(1.0f - ((maxDamage - damage) / (float) maxDamage), (maxDamage - damage) / (float) maxDamage, 0));
+                        int x1 = mc.getWindow().getScaledWidth() - 2 - Sydney.FONT_MANAGER.getWidth("Durability ") - Sydney.FONT_MANAGER.getWidth(s) + infoElem.getOffsetX();
+                        int y1 = (int)(mc.getWindow().getScaledHeight() - chatOffset - 2 - Sydney.FONT_MANAGER.getHeight() + (offset * -Sydney.FONT_MANAGER.getHeight())) + infoElem.getOffsetY();
+                        drawText(event.getContext(), getPrimary() + "Durability ", x1, y1, informationSync.getValue() ? null : new Color(170, 170, 170));
+
+                        int x2 = mc.getWindow().getScaledWidth() - 2 - Sydney.FONT_MANAGER.getWidth(s) + infoElem.getOffsetX();
+                        int y2 = y1;
+                        drawText(event.getContext(), s, x2, y2, false, new Color(1.0f - ((maxDamage - damage) / (float) maxDamage), (maxDamage - damage) / (float) maxDamage, 0));
+
+                        infoMinX = Math.min(infoMinX, Math.min(x1, x2));
+                        infoMinY = Math.min(infoMinY, Math.min(y1, y2));
+                        infoMaxX = Math.max(infoMaxX, Math.max(x1 + Sydney.FONT_MANAGER.getWidth(getPrimary() + "Durability "), x2 + Sydney.FONT_MANAGER.getWidth(s)));
+                        infoMaxY = Math.max(infoMaxY, y1 + Sydney.FONT_MANAGER.getHeight());
                         offset++;
                     }
                 } else {
-                    drawText(event.getContext(), text, mc.getWindow().getScaledWidth() - 2 - Sydney.FONT_MANAGER.getWidth(text), mc.getWindow().getScaledHeight() - chatOffset - 2 - Sydney.FONT_MANAGER.getHeight() + (offset * -Sydney.FONT_MANAGER.getHeight()), informationSync.getValue() ? null : new Color(170, 170, 170));
+                    int x = mc.getWindow().getScaledWidth() - 2 - Sydney.FONT_MANAGER.getWidth(text) + infoElem.getOffsetX();
+                    int y = (int)(mc.getWindow().getScaledHeight() - chatOffset - 2 - Sydney.FONT_MANAGER.getHeight() + (offset * -Sydney.FONT_MANAGER.getHeight())) + infoElem.getOffsetY();
+                    drawText(event.getContext(), text, x, y, informationSync.getValue() ? null : new Color(170, 170, 170));
+
+                    infoMinX = Math.min(infoMinX, x);
+                    infoMinY = Math.min(infoMinY, y);
+                    infoMaxX = Math.max(infoMaxX, x + Sydney.FONT_MANAGER.getWidth(text));
+                    infoMaxY = Math.max(infoMaxY, y + Sydney.FONT_MANAGER.getHeight());
                     offset++;
                 }
             }
+
+            if (!informationEntries.isEmpty()) {
+                trackBox("information", infoMinX, infoMinY, infoMaxX - infoMinX, infoMaxY - infoMinY);
+            } else {
+                trackBox("information", 0, 0, 0, 0);
+            }
+        } else {
+            trackBox("information", 0, 0, 0, 0);
         }
     }
 
@@ -404,19 +605,33 @@ public class HUDModule extends Module {
         if (mc.player == null || mc.world == null) return;
 
         float chatOffset = positionChatOffset.getValue() ? this.chatOffset : 0;
-        int offset = 0;
+        HudElement coordElem = hudElements.get("coordinates");
+        HudElement dirElem = hudElements.get("direction");
+
+        int coordOffset = 0;
 
         if (coordinates.getValue())  {
             String text = getSecondary() + String.valueOf(mc.player.getBlockX()) + (netherCoordinates.getValue() ? Formatting.GRAY + " [" + getSecondary() + WorldUtils.getNetherPosition(mc.player.getBlockX()) + Formatting.GRAY + "]" : "") + (inversion.getValue() || positionSync.getValue() ? Formatting.RESET : Formatting.GRAY) + ", " + getSecondary() + mc.player.getBlockY() + (inversion.getValue() || positionSync.getValue() ? Formatting.RESET : Formatting.GRAY) + ", " + getSecondary() + mc.player.getBlockZ() + (netherCoordinates.getValue() ? Formatting.GRAY + " [" + getSecondary() + WorldUtils.getNetherPosition(mc.player.getBlockZ()) + Formatting.GRAY + "]" : "");
 
-            drawText(event.getContext(), text, 2, mc.getWindow().getScaledHeight() - chatOffset - offset - Sydney.FONT_MANAGER.getHeight() - 2);
-            offset += Sydney.FONT_MANAGER.getHeight();
+            int x = 2 + coordElem.getOffsetX();
+            int y = (int)(mc.getWindow().getScaledHeight() - chatOffset - coordOffset - Sydney.FONT_MANAGER.getHeight() - 2) + coordElem.getOffsetY();
+            drawText(event.getContext(), text, x, y);
+            trackBox("coordinates", x, y, Sydney.FONT_MANAGER.getWidth(text), Sydney.FONT_MANAGER.getHeight());
+            coordOffset += Sydney.FONT_MANAGER.getHeight();
+        } else {
+            trackBox("coordinates", 0, 0, 0, 0);
         }
 
         if (direction.getValue()) {
             String text = getPrimary() + StringUtils.capitalize(mc.player.getMovementDirection().getName()) + (inversion.getValue() ? getSecondary() : Formatting.GRAY) + " [" + (inversion.getValue() ? getSecondary() : Formatting.WHITE) + WorldUtils.getMovementDirection(mc.player.getMovementDirection()) + (inversion.getValue() ? getSecondary() : Formatting.GRAY) + "]";
-            drawText(event.getContext(), text, 2, mc.getWindow().getScaledHeight() - chatOffset - offset - Sydney.FONT_MANAGER.getHeight() - 2, positionSync.getValue() ? null : Color.WHITE);
+            int x = 2 + dirElem.getOffsetX();
+            int y = (int)(mc.getWindow().getScaledHeight() - chatOffset - coordOffset - Sydney.FONT_MANAGER.getHeight() - 2) + dirElem.getOffsetY();
+            drawText(event.getContext(), text, x, y, positionSync.getValue() ? null : Color.WHITE);
+            trackBox("direction", x, y, Sydney.FONT_MANAGER.getWidth(text), Sydney.FONT_MANAGER.getHeight());
+        } else {
+            trackBox("direction", 0, 0, 0, 0);
         }
+
     }
 
     private void drawModuleText(Module module, DrawContext context, String text, float x, float y) {
@@ -488,4 +703,64 @@ public class HUDModule extends Module {
     public record ModuleEntry(Module module, String text) {}
     public record PlayerEntry(PlayerEntity player, String text, Identifier headTexture) {}
     public record PotionEntry(String text, Sprite sprite, Color color) {}
+
+    public boolean editMode;
+    public HudElement draggedElement;
+    private int dragOffX, dragOffY;
+
+    private double getMouseX() {
+        return mc.mouse.getX() * mc.getWindow().getScaledWidth() / mc.getWindow().getWidth();
+    }
+
+    private double getMouseY() {
+        return mc.mouse.getY() * mc.getWindow().getScaledHeight() / mc.getWindow().getHeight();
+    }
+
+    @SubscribeEvent
+    public void onMouseInput(MouseInputEvent event) {
+        if (!editMode || mc.player == null) return;
+
+        double mx = event.getMouseX();
+        double my = event.getMouseY();
+
+        if (event.getButton() == 0) {
+            if (draggedElement != null) {
+                draggedElement = null;
+                return;
+            }
+
+            for (HudElement element : hudElements.values()) {
+                if (element.getWidth() <= 0 || element.getHeight() <= 0) continue;
+                if (element.isHovering(mx, my)) {
+                    draggedElement = element;
+                    dragOffX = (int) (mx - element.getScreenX());
+                    dragOffY = (int) (my - element.getScreenY());
+                    return;
+                }
+            }
+        }
+
+        if (event.getButton() == 1) {
+            for (HudElement element : hudElements.values()) {
+                if (element.getWidth() <= 0 || element.getHeight() <= 0) continue;
+                if (element.isHovering(mx, my)) {
+                    element.setVisible(!element.isVisible());
+                    return;
+                }
+            }
+        }
+    }
+
+    public void updateEditOverlay(float mouseX, float mouseY) {
+        if (!editMode || draggedElement == null) return;
+        int newScreenX = (int) (mouseX - dragOffX);
+        int newScreenY = (int) (mouseY - dragOffY);
+        draggedElement.setOffsetX(draggedElement.getOffsetX() + (newScreenX - draggedElement.getScreenX()));
+        draggedElement.setOffsetY(draggedElement.getOffsetY() + (newScreenY - draggedElement.getScreenY()));
+    }
+
+    public void onEditModeDisabled() {
+        editMode = false;
+        draggedElement = null;
+    }
 }

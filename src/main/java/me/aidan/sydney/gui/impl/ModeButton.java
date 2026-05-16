@@ -5,7 +5,6 @@ import me.aidan.sydney.gui.ClickGuiScreen;
 import me.aidan.sydney.gui.api.Button;
 import me.aidan.sydney.gui.api.Frame;
 import me.aidan.sydney.settings.impl.ModeSetting;
-import me.aidan.sydney.utils.color.ColorUtils;
 import me.aidan.sydney.utils.graphics.Renderer2D;
 import net.minecraft.client.gui.DrawContext;
 import net.minecraft.util.Formatting;
@@ -24,16 +23,33 @@ public class ModeButton extends Button {
 
     @Override
     public void render(DrawContext context, int mouseX, int mouseY, float delta) {
-        Renderer2D.renderQuad(context.getMatrices(), getX() + getPadding() + 1, getY(), getX() + getWidth() - getPadding() - 1, getY() + getParent().getHeight() - 1, ClickGuiScreen.getButtonColor(getY(), 100));
-        Renderer2D.renderQuad(context.getMatrices(), getX() + getPadding() + 1, getY(), getX() + getPadding() + 2, getY() + getHeight() - 1, ClickGuiScreen.getButtonColor(getY(), 255));
-
-        Sydney.FONT_MANAGER.drawTextWithShadow(context, setting.getTag(), getX() + getTextPadding() + 1, getY() + 2, Color.WHITE);
-        Sydney.FONT_MANAGER.drawTextWithShadow(context, Formatting.GRAY + setting.getValue(), getX() + getWidth() - getTextPadding() - 1 - Sydney.FONT_MANAGER.getWidth(setting.getValue()), getY() + 2, Color.WHITE);
+        String value = setting.getValue();
+        int valueWidth = Sydney.FONT_MANAGER.getWidth(value) + 8;
+        int maxLabelWidth = getWidth() - valueWidth - 12;
+        String label = setting.getTag();
+        if (Sydney.FONT_MANAGER.getWidth(label) > maxLabelWidth && maxLabelWidth > 10) {
+            while (Sydney.FONT_MANAGER.getWidth(label + "...") > maxLabelWidth && label.length() > 1) {
+                label = label.substring(0, label.length() - 1);
+            }
+            label += "...";
+        }
+        Sydney.FONT_MANAGER.drawTextWithShadow(context, label, getX() + 6, getY() + 2, Color.WHITE);
+        Sydney.FONT_MANAGER.drawTextWithShadow(context, Formatting.GRAY + value, getX() + getWidth() - 8 - Sydney.FONT_MANAGER.getWidth(value), getY() + 2, Color.WHITE);
 
         if(open) {
             int i = 0;
             for(String s : setting.getModes()) {
-                Sydney.FONT_MANAGER.drawTextWithShadow(context, (setting.getValue().equals(s) ? "" : Formatting.GRAY) + s, getX() + getTextPadding() + 2, getY() + getParent().getHeight() + i + 2, Color.WHITE);
+                int itemY = getY() + getParent().getHeight() + i;
+                boolean hovered = mouseX >= getX() + 4 && mouseX <= getX() + getWidth() - 4 && mouseY >= itemY && mouseY <= itemY + getParent().getHeight();
+                boolean selected = setting.getValue().equals(s);
+
+                if(hovered || selected) {
+                    Renderer2D.renderQuad(context.getMatrices(), getX() + 4, itemY, getX() + getWidth() - 4, itemY + getParent().getHeight(),
+                            selected ? ClickGuiScreen.getButtonColor(getY(), 60) : new Color(255, 255, 255, 10));
+                }
+
+                Sydney.FONT_MANAGER.drawTextWithShadow(context, (selected ? "" : Formatting.GRAY) + s, getX() + 8, itemY + 2,
+                        selected ? Color.WHITE : (hovered ? Color.WHITE : new Color(140, 140, 140)));
                 i += getParent().getHeight();
             }
         }
@@ -46,7 +62,6 @@ public class ModeButton extends Button {
                 int choice = setting.getModes().indexOf(setting.getValue());
                 choice ++;
                 if(choice > setting.getModes().size() - 1) choice = 0;
-
                 setting.setValue(setting.getModes().get(choice));
                 playClickSound();
             } else if(button == 1) {

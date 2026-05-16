@@ -22,6 +22,7 @@ repositories {
 		name = "meteor-maven"
 		url = "https://maven.meteordev.org"
 	}
+	mavenCentral()
 }
 
 dependencies {

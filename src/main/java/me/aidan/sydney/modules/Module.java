@@ -9,6 +9,7 @@ import me.aidan.sydney.utils.IMinecraft;
 import me.aidan.sydney.utils.animations.Animation;
 import me.aidan.sydney.utils.animations.Easing;
 import me.aidan.sydney.utils.chat.ChatUtils;
+import me.aidan.sydney.utils.text.CustomFormatting;
 import net.minecraft.util.Formatting;
 
 import java.awt.*;
@@ -77,7 +78,7 @@ public abstract class Module implements IMinecraft {
             animationOffset.setEasing(Easing.Method.EASE_OUT_CUBIC);
 
             if (notify && chatNotify.getValue()) {
-                Sydney.CHAT_MANAGER.message(ChatUtils.getPrimary() + name + ChatUtils.getSecondary() + ".toggled = " + Formatting.GREEN + "true" + ChatUtils.getSecondary() + ";", "toggle-" + getName().toLowerCase());
+                Sydney.CHAT_MANAGER.message(CustomFormatting.CLIENT + name + ChatUtils.getSecondary() + ".toggled = " + Formatting.GREEN + "true" + ChatUtils.getSecondary() + ";", "toggle-" + getName().toLowerCase());
             }
 
             onEnable();
@@ -89,7 +90,7 @@ public abstract class Module implements IMinecraft {
             onDisable();
 
             if (notify && chatNotify.getValue()) {
-                Sydney.CHAT_MANAGER.message(ChatUtils.getPrimary() + name + ChatUtils.getSecondary() + ".toggled = " + Formatting.RED + "false" + ChatUtils.getSecondary() + ";", "toggle-" + getName().toLowerCase());
+                Sydney.CHAT_MANAGER.message(CustomFormatting.CLIENT + name + ChatUtils.getSecondary() + ".toggled = " + Formatting.RED + "false" + ChatUtils.getSecondary() + ";", "toggle-" + getName().toLowerCase());
             }
         }
     }

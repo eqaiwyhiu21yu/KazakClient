@@ -22,10 +22,18 @@ public class BindButton extends Button {
 
     @Override
     public void render(DrawContext context, int mouseX, int mouseY, float delta) {
-        Sydney.FONT_MANAGER.drawTextWithShadow(context, setting.getTag(), getX() + getTextPadding() + 1, getY() + 2, Color.WHITE);
-
         String bind = listening ? "..." : KeyboardUtils.getKeyName(setting.getValue());
-        Sydney.FONT_MANAGER.drawTextWithShadow(context, Formatting.GRAY + bind, getX() + getWidth() - getTextPadding() - 1 - Sydney.FONT_MANAGER.getWidth(bind), getY() + 2, Color.WHITE);
+        int bindWidth = Sydney.FONT_MANAGER.getWidth(bind) + 8;
+        int maxLabelWidth = getWidth() - bindWidth - 12;
+        String label = setting.getTag();
+        if (Sydney.FONT_MANAGER.getWidth(label) > maxLabelWidth && maxLabelWidth > 10) {
+            while (Sydney.FONT_MANAGER.getWidth(label + "...") > maxLabelWidth && label.length() > 1) {
+                label = label.substring(0, label.length() - 1);
+            }
+            label += "...";
+        }
+        Sydney.FONT_MANAGER.drawTextWithShadow(context, label, getX() + 6, getY() + 2, Color.WHITE);
+        Sydney.FONT_MANAGER.drawTextWithShadow(context, Formatting.GRAY + bind, getX() + getWidth() - 8 - Sydney.FONT_MANAGER.getWidth(bind), getY() + 2, Color.WHITE);
     }
 
     @Override

@@ -43,7 +43,7 @@ public class Frame {
         if(open) {
             totalHeight += 1;
             for(Button button : buttons) {
-                button.setX(x);
+                button.setX(x + 2);
                 button.setY(y + totalHeight);
                 totalHeight += button.getHeight();
 
@@ -53,7 +53,7 @@ public class Frame {
                         b.setVisible(b.getSetting().getVisibility().isVisible());
                         if(!b.isVisible()) continue;
 
-                        b.setX(x);
+                        b.setX(x + 4);
                         b.setY(y + totalHeight);
                         totalHeight += b.getHeight();
                     }
@@ -61,12 +61,12 @@ public class Frame {
             }
         }
 
-        Renderer2D.renderQuad(context.getMatrices(), x, y, x + width, y + height, ClickGuiScreen.getButtonColor(y, 100));
-        Sydney.FONT_MANAGER.drawTextWithShadow(context, category.getName(), x + textPadding, y + 2, Color.WHITE);
+        Renderer2D.renderQuad(context.getMatrices(), x, y, x + width, y + height, ClickGuiScreen.getButtonColor(y, 255));
+        Sydney.FONT_MANAGER.drawTextWithShadow(context, category.getName(), x + textPadding, y + 3, Color.WHITE);
 
         if(open) {
-            Color color = Sydney.MODULE_MANAGER.getModule(ClickGuiModule.class).color.getColor();
-            Renderer2D.renderQuad(context.getMatrices(), x, y + height, x + width, y + totalHeight + 1, Sydney.MODULE_MANAGER.getModule(ClickGuiModule.class).isRainbow() ? new Color(0, 0, 0, 100) : new Color((int) (color.getRed()*0.3), (int) (color.getGreen()*0.3), (int) (color.getBlue()*0.3), 100));
+            int bodyEnd = y + totalHeight;
+            Renderer2D.renderQuad(context.getMatrices(), x, y + height, x + width, bodyEnd, new Color(0, 0, 0, 140));
             for(Button button : buttons) {
                 button.render(context, mouseX, mouseY, delta);
             }

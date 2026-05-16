@@ -2,8 +2,8 @@
 	"schemaVersion": 1,
 	"id": "sydney",
 	"version": "${version}",
-	"name": "Sydney",
-	"description": "Sydney is a Minecraft utility mod aimed at anarchy servers, giving you useful features for combat and utility.",
+"name": "Kazak Client",
+"description": "Kazak Client is a premium Minecraft utility mod giving you powerful features for combat and utility.",
 	"authors": [
 		"Aidan",
 		"p4nda",

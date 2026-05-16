@@ -3,9 +3,6 @@ package me.aidan.sydney.gui.api;
 import lombok.Getter;
 import lombok.Setter;
 import me.aidan.sydney.Sydney;
-import me.aidan.sydney.gui.ClickGuiScreen;
-import me.aidan.sydney.modules.impl.core.ClickGuiModule;
-import me.aidan.sydney.utils.color.ColorUtils;
 import me.aidan.sydney.utils.graphics.Renderer2D;
 import me.aidan.sydney.utils.text.FormattingUtils;
 import net.minecraft.client.gui.DrawContext;
@@ -16,54 +13,34 @@ import java.util.List;
 @Getter @Setter
 public class DescriptionFrame {
     private String description = "";
-    private int x, y, width, height, dragX = 0, dragY = 0, textPadding = 3;
-    private boolean dragging = false;
-
-    public DescriptionFrame(int x, int y, int width, int height) {
-        this.x = x;
-        this.y = y;
-        this.width = width;
-        this.height = height;
-    }
+    private int textPadding = 4;
 
     public void render(DrawContext context, int mouseX, int mouseY, float delta) {
-        if(dragging) {
-            setX(mouseX - dragX);
-            setY(mouseY - dragY);
-        }
+        if (description.isEmpty()) return;
 
-        Renderer2D.renderQuad(context.getMatrices(), x, y, x + width, y + height, ClickGuiScreen.getButtonColor(y, 100));
-        Sydney.FONT_MANAGER.drawTextWithShadow(context, "Description", x + textPadding, y + 2, Color.WHITE);
-        if(!description.isEmpty()) {
-            List<String> wrappedText =FormattingUtils.wrapText(description, width - textPadding*2);
-            Color color = Sydney.MODULE_MANAGER.getModule(ClickGuiModule.class).color.getColor();
+        List<String> wrapped = FormattingUtils.wrapText(description, 180);
+        int lineH = Sydney.FONT_MANAGER.getHeight();
+        int boxW = 180;
+        int boxH = wrapped.size() * lineH + textPadding * 2;
 
-            Renderer2D.renderQuad(context.getMatrices(), x, y + height, x + width, y + height + (wrappedText.size()*Sydney.FONT_MANAGER.getHeight()) + 4, Sydney.MODULE_MANAGER.getModule(ClickGuiModule.class).isRainbow() ? new Color(0, 0, 0, 100) : new Color((int) (color.getRed()*0.3), (int) (color.getGreen()*0.3), (int) (color.getBlue()*0.3), 100));
-            int i = 0;
-            for(String s : wrappedText) {
-                Sydney.FONT_MANAGER.drawTextWithShadow(context, s, x + textPadding, y + height + 2 + (Sydney.FONT_MANAGER.getHeight()*i), Color.WHITE);
-                i++;
-            }
-        }
-    }
+        int tooltipX = mouseX + 8;
+        int tooltipY = mouseY + 4;
 
-    public void mouseClicked(double mouseX, double mouseY, int button) {
-        if(isHovering(mouseX, mouseY)) {
-            if(button == 0) {
-                dragging = true;
-                dragX = (int) (mouseX - getX());
-                dragY = (int) (mouseY - getY());
-            }
-        }
-    }
+        if (tooltipX + boxW > context.getScaledWindowWidth()) tooltipX = mouseX - boxW - 8;
+        if (tooltipY + boxH > context.getScaledWindowHeight()) tooltipY = mouseY - boxH - 4;
 
-    public void mouseReleased(double mouseX, double mouseY, int button) {
-        if (button == 0) {
-            dragging = false;
+        int x = Math.max(2, tooltipX);
+        int y = Math.max(2, tooltipY);
+
+        Renderer2D.renderQuad(context.getMatrices(), x, y, x + boxW, y + boxH, new Color(0, 0, 0, 200));
+        Renderer2D.renderOutline(context.getMatrices(), x, y, x + boxW, y + boxH, new Color(80, 80, 80, 200));
+
+        for (int i = 0; i < wrapped.size(); i++) {
+            Sydney.FONT_MANAGER.drawTextWithShadow(context, wrapped.get(i), x + textPadding, y + textPadding + (lineH * i), Color.WHITE);
         }
     }
 
     public boolean isHovering(double mouseX, double mouseY) {
-        return x <= mouseX && y <= mouseY && x + width > mouseX && y + height > mouseY;
+        return false;
     }
 }

@@ -49,6 +49,7 @@ public class SpeedMineModule extends Module {
     public BooleanSetting instant = new BooleanSetting("Instant", "Instantly mines blocks once they have been replaced.", false);
     public NumberSetting instantDelay = new NumberSetting("InstantDelay", "The amount of time that has to pass before instantly mining blocks.", new BooleanSetting.Visibility(instant, true), 0, 0, 20);
     public NumberSetting instantTimeout = new NumberSetting("InstantTimeout", "The amount of time that cancel instantly mine while no block to mine.", new BooleanSetting.Visibility(instant, true), 60, 0, 100);
+    public BooleanSetting prePlace = new BooleanSetting("PrePlace", "Pre-emptively sends mining packets for more consistent block breaking.", false);
     public BooleanSetting grim = new BooleanSetting("Grim", "Adds a bypass catered to the Grim anticheat.", false);
     public BooleanSetting strict = new BooleanSetting("Strict", "Waits for the server to tick you before switching back.", false);
     public BooleanSetting whileEating = new BooleanSetting("WhileEating", "Mines blocks while eating.", true);
@@ -209,7 +210,7 @@ public class SpeedMineModule extends Module {
 
     private boolean handle(BlockPos position, int priority) {
         if (mc.interactionManager.getCurrentGameMode() == GameMode.CREATIVE || mc.interactionManager.getCurrentGameMode() == GameMode.SPECTATOR) return false;
-        if (mc.world.getBlockState(position).getBlock().getHardness() == -1) return false;
+        if (!prePlace.getValue() && mc.world.getBlockState(position).getBlock().getHardness() == -1) return false;
         if (!whitelist.getWhitelist().isEmpty() && !whitelist.isWhitelistContains(mc.world.getBlockState(position).getBlock())) return false;
         if (mc.player.getEyePos().squaredDistanceTo(Vec3d.ofCenter(position)) > MathHelper.square(range.getValue().doubleValue()))
             return false;
@@ -381,8 +382,10 @@ public class SpeedMineModule extends Module {
             if (secondary) instantMine = false;
 
             if (secondary && mc.world.getBlockState(position).isReplaceable()) {
-                cancel();
-                return true;
+                if (!prePlace.getValue()) {
+                    cancel();
+                    return true;
+                }
             }
 
             Direction direction = WorldUtils.getClosestDirection(position, true);
@@ -393,6 +396,13 @@ public class SpeedMineModule extends Module {
             }
 
             if (mining) {
+                if (state.isReplaceable()) {
+                    if (prePlace.getValue()) {
+                        start();
+                    }
+                    return false;
+                }
+
                 int slot = switchMode.getValue().equalsIgnoreCase("None") ? -1 : InventoryUtils.findFastestItem(this.state, InventoryUtils.HOTBAR_START, switchMode.getValue().equalsIgnoreCase("AltSwap") || switchMode.getValue().equalsIgnoreCase("AltPickup") ? InventoryUtils.INVENTORY_END : InventoryUtils.HOTBAR_END);
                 if (slot == -1) slot = mc.player.getInventory().selectedSlot;
 

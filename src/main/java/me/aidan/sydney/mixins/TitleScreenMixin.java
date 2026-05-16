@@ -38,25 +38,25 @@ public abstract class TitleScreenMixin extends Screen implements IMinecraft {
         Color color = Color.WHITE;
 
         if (Sydney.UPDATE_STATUS.equalsIgnoreCase("update-available")) {
-            secondaryText = "An update is available for Sydney.";
+            secondaryText = "An update is available for Kazak Client.";
             primaryText = "Please restart the game to apply changes.";
             color = Color.ORANGE;
         }
 
         if (Sydney.UPDATE_STATUS.equalsIgnoreCase("failed-connection")) {
-            secondaryText = "Failed to connect to Sydney's servers.";
+            secondaryText = "Failed to connect to Kazak Client's servers.";
             primaryText = "Please make sure you have a working internet connection.";
             color = Color.RED;
         }
 
         if (Sydney.UPDATE_STATUS.equalsIgnoreCase("failed")) {
-            secondaryText = "Failed to update Sydney.";
+            secondaryText = "Failed to update Kazak Client.";
             primaryText = "Please make sure the auto-updater is working properly.";
             color = Color.RED;
         }
 
         if (Sydney.UPDATE_STATUS.equalsIgnoreCase("up-to-date")) {
-            primaryText = "Sydney is on the latest version.";
+            primaryText = "Kazak Client is on the latest version.";
         }
 
         if (primaryText.isEmpty()) return;

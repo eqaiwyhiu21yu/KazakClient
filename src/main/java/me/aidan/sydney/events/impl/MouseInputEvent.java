@@ -8,4 +8,6 @@ import me.aidan.sydney.events.Event;
 @AllArgsConstructor
 public class MouseInputEvent extends Event {
     private final int button;
+    private final double mouseX;
+    private final double mouseY;
 }

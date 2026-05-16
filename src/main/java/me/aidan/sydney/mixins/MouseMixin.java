@@ -20,7 +20,9 @@ public class MouseMixin {
     private void onMouseButton(long window, int button, int action, int mods, CallbackInfo info) {
         Sydney.EVENT_HANDLER.post(new UnfilteredMouseInputEvent(button, action, mods));
         if (window == client.getWindow().getHandle() && action == 1 && client.currentScreen == null) {
-            Sydney.EVENT_HANDLER.post(new MouseInputEvent(button));
+            double mx = client.mouse.getX() * client.getWindow().getScaledWidth() / client.getWindow().getWidth();
+            double my = client.mouse.getY() * client.getWindow().getScaledHeight() / client.getWindow().getHeight();
+            Sydney.EVENT_HANDLER.post(new MouseInputEvent(button, mx, my));
         }
     }
 }

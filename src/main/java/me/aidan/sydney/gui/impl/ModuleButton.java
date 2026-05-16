@@ -9,8 +9,8 @@ import me.aidan.sydney.gui.api.Button;
 import me.aidan.sydney.gui.api.Frame;
 import me.aidan.sydney.settings.Setting;
 import me.aidan.sydney.settings.impl.*;
-import me.aidan.sydney.utils.color.ColorUtils;
 import me.aidan.sydney.utils.graphics.Renderer2D;
+import me.aidan.sydney.utils.input.KeyboardUtils;
 import net.minecraft.client.gui.DrawContext;
 import net.minecraft.util.Formatting;
 
@@ -50,10 +50,38 @@ public class ModuleButton extends Button {
 
     @Override
     public void render(DrawContext context, int mouseX, int mouseY, float delta) {
+        if (isFiltered()) return;
         if(this.isHovering(mouseX, mouseY) && Sydney.CLICK_GUI.getDescriptionFrame().getDescription().isEmpty()) Sydney.CLICK_GUI.getDescriptionFrame().setDescription(this.getDescription());
 
-        Renderer2D.renderQuad(context.getMatrices(), getX() + getPadding(), getY(), getX() + getWidth() - getPadding(), getY() + getHeight() - 1, ClickGuiScreen.getButtonColor(getY(), module.isToggled() ? 80 : 30));
-        Sydney.FONT_MANAGER.drawTextWithShadow(context, (module.isToggled() ? "" : Formatting.GRAY ) + module.getName(), getX() + getTextPadding(), getY() + 2, Color.WHITE);
+        int bx = getX();
+        int by = getY();
+        int bw = getWidth() - getPadding() * 2;
+        int bh = getHeight() - 1;
+
+        boolean hovered = isHovering(mouseX, mouseY);
+
+        if(module.isToggled()) {
+            Renderer2D.renderQuad(context.getMatrices(), bx, by, bx + bw, by + bh, ClickGuiScreen.getButtonColor(getY(), 180));
+        } else if(hovered) {
+            Renderer2D.renderQuad(context.getMatrices(), bx, by, bx + bw, by + bh, new Color(255, 255, 255, 15));
+        }
+
+        Renderer2D.renderOutline(context.getMatrices(), bx, by, bx + bw, by + bh, new Color(ClickGuiScreen.getButtonColor(getY(), 50).getRGB(), true));
+
+        int textColor = module.isToggled() ? 0xFFFFFFFF : 0xFFAAAAAA;
+        Sydney.FONT_MANAGER.drawTextWithShadow(context, module.getName(), bx + 4, by + 2, new Color(textColor, true));
+
+        String bindText = module.getBind() == 0 ? "" : KeyboardUtils.getKeyName(module.getBind());
+        if(!bindText.isEmpty()) {
+            Sydney.FONT_MANAGER.drawTextWithShadow(context, Formatting.DARK_GRAY + bindText, bx + bw - Sydney.FONT_MANAGER.getWidth(bindText) - 6, by + 2, Color.WHITE);
+        }
+
+        if(!buttons.isEmpty()) {
+            String arrow = open ? "-" : "+";
+            int arrowX = bx + bw - 7;
+            if(!bindText.isEmpty()) arrowX = bx + bw - Sydney.FONT_MANAGER.getWidth(arrow) - 3;
+            Sydney.FONT_MANAGER.drawTextWithShadow(context, arrow, arrowX, by + 2, open ? new Color(200, 200, 200) : new Color(100, 100, 100));
+        }
 
         if(open) {
             for(Button button : buttons) {
@@ -116,5 +144,19 @@ public class ModuleButton extends Button {
                 b.charTyped(chr, modifiers);
             }
         }
+    }
+
+    private boolean isFiltered() {
+        String query = ClickGuiScreen.getSearchQuery();
+        return !query.isEmpty() && !module.getName().toLowerCase().contains(query.toLowerCase());
+    }
+
+    @Override
+    public int getHeight() {
+        return isFiltered() ? 0 : super.getHeight();
+    }
+
+    public boolean isOpen() {
+        return !isFiltered() && open;
     }
 }

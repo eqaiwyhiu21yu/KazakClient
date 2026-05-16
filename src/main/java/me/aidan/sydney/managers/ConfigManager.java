@@ -5,7 +5,9 @@ import lombok.Cleanup;
 import lombok.Getter;
 import lombok.Setter;
 import me.aidan.sydney.Sydney;
+import me.aidan.sydney.gui.hud.HudElement;
 import me.aidan.sydney.modules.Module;
+import me.aidan.sydney.modules.impl.core.HUDModule;
 import me.aidan.sydney.settings.Setting;
 import me.aidan.sydney.settings.impl.*;
 import me.aidan.sydney.utils.minecraft.IdentifierUtils;
@@ -19,6 +21,7 @@ import java.io.*;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Paths;
+import java.util.Map;
 import java.util.StringJoiner;
 
 @Getter @Setter
@@ -246,6 +249,18 @@ public class ConfigManager {
                     default -> {}
                 }
             }
+
+            if (module instanceof HUDModule hud && moduleObject.has("HudElements")) {
+                JsonObject elementsObject = moduleObject.get("HudElements").getAsJsonObject();
+                for (Map.Entry<String, HudElement> entry : hud.getHudElements().entrySet()) {
+                    if (elementsObject.has(entry.getKey())) {
+                        JsonObject elemObj = elementsObject.get(entry.getKey()).getAsJsonObject();
+                        if (elemObj.has("offsetX")) entry.getValue().setOffsetX(elemObj.get("offsetX").getAsInt());
+                        if (elemObj.has("offsetY")) entry.getValue().setOffsetY(elemObj.get("offsetY").getAsInt());
+                        if (elemObj.has("visible")) entry.getValue().setVisible(elemObj.get("visible").getAsBoolean());
+                    }
+                }
+            }
         }
 
         this.currentConfig = config;
@@ -261,6 +276,18 @@ public class ConfigManager {
         for (Module module : Sydney.MODULE_MANAGER.getModules()) {
             JsonObject moduleObject = new JsonObject();
             moduleObject.add("Status", new JsonPrimitive(module.isToggled()));
+
+            if (module instanceof HUDModule hud) {
+                JsonObject elementsObject = new JsonObject();
+                for (Map.Entry<String, HudElement> entry : hud.getHudElements().entrySet()) {
+                    JsonObject elemObj = new JsonObject();
+                    elemObj.add("offsetX", new JsonPrimitive(entry.getValue().getOffsetX()));
+                    elemObj.add("offsetY", new JsonPrimitive(entry.getValue().getOffsetY()));
+                    elemObj.add("visible", new JsonPrimitive(entry.getValue().isVisible()));
+                    elementsObject.add(entry.getKey(), elemObj);
+                }
+                moduleObject.add("HudElements", elementsObject);
+            }
 
             JsonObject settingsObject = new JsonObject();
             for (Setting uncastedSetting : module.getSettings()) {

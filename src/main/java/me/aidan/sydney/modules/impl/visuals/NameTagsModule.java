@@ -54,7 +54,7 @@ public class NameTagsModule extends Module {
     public BooleanSetting health = new BooleanSetting("Health", "Renders the player's health and absorption.", true);
     public BooleanSetting totemPops = new BooleanSetting("TotemPops", "Renders the amount of totems that the player has popped.", true);
     public BooleanSetting antiBot = new BooleanSetting("AntiBot", "Prevents bots from having nametags rendered for them.", false);
-    public BooleanSetting sydneyCheck = new BooleanSetting("SydneyCheck", "Adds an indicator next to the name of other users..", true);
+    public BooleanSetting clientCheck = new BooleanSetting("ClientCheck", "Adds an indicator next to the name of other users..", true);
 
     public BooleanSetting items = new BooleanSetting("Items", "Renders the items that the player is wearing or holding.", true);
     public BooleanSetting enchantments = new BooleanSetting("Enchantments", "Renders the enchantments of the player's items.", false);

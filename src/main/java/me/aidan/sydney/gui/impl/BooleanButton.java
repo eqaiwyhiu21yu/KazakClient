@@ -5,7 +5,6 @@ import me.aidan.sydney.gui.ClickGuiScreen;
 import me.aidan.sydney.gui.api.Button;
 import me.aidan.sydney.gui.api.Frame;
 import me.aidan.sydney.settings.impl.BooleanSetting;
-import me.aidan.sydney.utils.color.ColorUtils;
 import me.aidan.sydney.utils.graphics.Renderer2D;
 import net.minecraft.client.gui.DrawContext;
 import net.minecraft.util.Formatting;
@@ -22,8 +21,33 @@ public class BooleanButton extends Button {
 
     @Override
     public void render(DrawContext context, int mouseX, int mouseY, float delta) {
-        if(setting.getValue())Renderer2D.renderQuad(context.getMatrices(), getX() + getPadding() + 1, getY(), getX() + getWidth() - getPadding() - 1, getY() + getHeight() - 1, ClickGuiScreen.getButtonColor(getY(), 100));
-        Sydney.FONT_MANAGER.drawTextWithShadow(context, (setting.getValue() ? "" : Formatting.GRAY) + setting.getTag(), getX() + getTextPadding() + 1, getY() + 2, Color.WHITE);
+        int bx = getX();
+        int by = getY();
+        int bw = getWidth() - getPadding() * 2;
+
+        String label = setting.getTag();
+        int boxX = bx + bw - 17;
+        int boxSize = 9;
+        if (boxX - bx - 10 > 0) {
+            int labelColor = setting.getValue() ? 0xFFFFFFFF : 0xFF999999;
+            Sydney.FONT_MANAGER.drawTextWithShadow(context, label, bx + 4, by + 2, new Color(labelColor, true));
+        }
+
+        int boxY = by + 2;
+        boolean hovered = mouseX >= boxX && mouseX <= boxX + boxSize && mouseY >= boxY && mouseY <= boxY + boxSize;
+
+        if (setting.getValue()) {
+            Renderer2D.renderBorderedRect(context.getMatrices(), boxX, boxY, boxX + boxSize, boxY + boxSize, ClickGuiScreen.getButtonColor(getY(), 200), new Color(0, 0, 0, 100));
+        } else if (hovered) {
+            Renderer2D.renderBorderedRect(context.getMatrices(), boxX, boxY, boxX + boxSize, boxY + boxSize, new Color(60, 60, 60, 100), new Color(80, 80, 80, 150));
+        } else {
+            Renderer2D.renderBorderedRect(context.getMatrices(), boxX, boxY, boxX + boxSize, boxY + boxSize, new Color(30, 30, 30, 150), new Color(80, 80, 80, 120));
+        }
+
+        if (setting.getValue()) {
+            Renderer2D.renderLine(context.getMatrices(), boxX + 2, boxY + boxSize / 2, boxX + 4, boxY + boxSize - 2, Color.WHITE);
+            Renderer2D.renderLine(context.getMatrices(), boxX + 4, boxY + boxSize - 2, boxX + boxSize - 2, boxY + 2, Color.WHITE);
+        }
     }
 
     @Override

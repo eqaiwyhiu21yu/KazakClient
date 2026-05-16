@@ -33,7 +33,13 @@ public class InventoryUtils implements IMinecraft {
                 ((ClientPlayerInteractionManagerAccessor) mc.interactionManager).invokeSyncSelectedSlot();
             }
             case "Silent" -> mc.getNetworkHandler().sendPacket(new UpdateSelectedSlotC2SPacket(slot));
-            case "AltPickup" -> swap("Pickup", slot, previousSlot);
+            case "AltPickup" -> {
+                if (slot >= 0 && slot <= 8) {
+                    swap("Swap", slot, previousSlot);
+                } else {
+                    swap("Pickup", slot, previousSlot);
+                }
+            }
             case "AltSwap" -> swap("Swap", slot, previousSlot);
         }
     }
@@ -47,7 +53,13 @@ public class InventoryUtils implements IMinecraft {
                 if (previousSlot == Sydney.POSITION_MANAGER.getServerSlot()) return;
                 mc.getNetworkHandler().sendPacket(new UpdateSelectedSlotC2SPacket(previousSlot));
             }
-            case "AltPickup" -> swap("Pickup", slot, previousSlot);
+            case "AltPickup" -> {
+                if (slot >= 0 && slot <= 8) {
+                    swap("Swap", slot, previousSlot);
+                } else {
+                    swap("Pickup", slot, previousSlot);
+                }
+            }
             case "AltSwap" -> swap("Swap", slot, previousSlot);
         }
     }

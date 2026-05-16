@@ -13,6 +13,7 @@ import me.aidan.sydney.settings.impl.*;
 import me.aidan.sydney.utils.color.ColorUtils;
 import me.aidan.sydney.utils.minecraft.DamageUtils;
 import me.aidan.sydney.utils.minecraft.InventoryUtils;
+import me.aidan.sydney.utils.minecraft.NetworkUtils;
 import me.aidan.sydney.utils.minecraft.PositionUtils;
 import me.aidan.sydney.utils.minecraft.WorldUtils;
 import me.aidan.sydney.utils.rotations.RotationUtils;
@@ -50,7 +51,7 @@ import java.util.concurrent.Executors;
 public class AutoCrystalModule extends Module {
     public CategorySetting attackCategory = new CategorySetting("Attack", "The category for settings related to attacking crystals.");
     public BooleanSetting attack = new BooleanSetting("Attack", "Enabled", "Automatically attacks crystals that are deemed safe.", new CategorySetting.Visibility(attackCategory), true);
-    public NumberSetting attackSpeed = new NumberSetting("AttackSpeed", "Speed", "The speed at which crystals will be attacked.", new CategorySetting.Visibility(attackCategory), 20.0f, 0.1f, 20.0f);
+    public NumberSetting attackSpeed = new NumberSetting("AttackSpeed", "Speed", "The speed at which crystals will be attacked.", new CategorySetting.Visibility(attackCategory), 20.0f, 0.1f, 40.0f);
     public NumberSetting attackRange = new NumberSetting("AttackRange", "Range", "The maximum distance at which crystals will be attacked.", new CategorySetting.Visibility(attackCategory), 4.5, 0.0, 8.0);
     public NumberSetting attackWallsRange = new NumberSetting("AttackWallsRange", "WallsRange", "The maximum distance at which crystals will be attacked through walls.", new CategorySetting.Visibility(attackCategory), 4.5, 0.0, 8.0);
     public ModeSetting antiWeakness = new ModeSetting("AntiWeakness", "Allows you to attack crystals when weaknessed.", new CategorySetting.Visibility(attackCategory), "None", new String[]{"None", "Normal", "Silent"});
@@ -59,7 +60,7 @@ public class AutoCrystalModule extends Module {
 
     public CategorySetting placeCategory = new CategorySetting("Place", "The category for settings related to placing crystals.");
     public BooleanSetting place = new BooleanSetting("Place", "Enabled", "Automatically places crystals on positions that are deemed safe and lethal enough.", new CategorySetting.Visibility(placeCategory), true);
-    public NumberSetting placeSpeed = new NumberSetting("PlaceSpeed", "Speed", "The speed at which crystals will be placed.", new CategorySetting.Visibility(placeCategory), 20.0f, 0.1f, 20.0f);
+    public NumberSetting placeSpeed = new NumberSetting("PlaceSpeed", "Speed", "The speed at which crystals will be placed.", new CategorySetting.Visibility(placeCategory), 20.0f, 0.1f, 40.0f);
     public NumberSetting placeRange = new NumberSetting("PlaceRange", "Range", "The maximum distance at which positions will be placed on.", new CategorySetting.Visibility(placeCategory), 4.5, 0.0, 8.0);
     public NumberSetting placeWallsRange = new NumberSetting("PlaceWallsRange", "WallsRange", "The maximum distance at which positions will be placed on through walls.", new CategorySetting.Visibility(placeCategory), 4.5, 0.0, 8.0);
     public ModeSetting placements = new ModeSetting("Placements", "The version of the game that will be used for crystal placement calculations.", new CategorySetting.Visibility(placeCategory), "Native", new String[]{"Native", "Protocol"});
@@ -67,7 +68,7 @@ public class AutoCrystalModule extends Module {
     public ModeSetting autoSwitch = new ModeSetting("Switch", "Automatically switches to a crystal if you aren't currently holding one.", new CategorySetting.Visibility(placeCategory), "None", new String[]{"None", "Normal", "Silent", "AltSwap"});
 
     public CategorySetting miscellaneousCategory = new CategorySetting("Miscellaneous", "The category for all miscellaneous settings.");
-    public ModeSetting sequential = new ModeSetting("Sequential", "The sequence that the module's processes will be run in.", new CategorySetting.Visibility(miscellaneousCategory), "Strong", new String[]{"None", "Strict", "Strong"});
+    public ModeSetting sequential = new ModeSetting("Sequential", "The sequence that the module's processes will be run in.", new CategorySetting.Visibility(miscellaneousCategory), "Strong", new String[]{"None", "Strict", "Strong", "Grim"});
     public ModeSetting rotate = new ModeSetting("Rotate", "Automatically rotates to the crystal whenever attacking or placing.", new CategorySetting.Visibility(miscellaneousCategory), "Normal", new String[]{"None", "Normal", "Packet"});
     public ModeSetting swing = new ModeSetting("Swing", "The hand that will be used for swinging.", new CategorySetting.Visibility(miscellaneousCategory), "Default", new String[]{"Default", "None", "Packet", "Mainhand", "Offhand", "Both"});
     public BooleanSetting yawStep = new BooleanSetting("YawStep", "Performs your rotations over multiple ticks.", new CategorySetting.Visibility(miscellaneousCategory), false);
@@ -87,6 +88,7 @@ public class AutoCrystalModule extends Module {
     public NumberSetting offset = new NumberSetting("Offset", "The amount that the last entity ID should be offset by.", new CategorySetting.Visibility(predictionCategory), 0, 0, 2);
     public ModeSetting godSwing = new ModeSetting("GodSwing", "Swing", "The swinging that will be done for each predicted attack.", new CategorySetting.Visibility(predictionCategory), "Normal", new String[]{"None", "Normal", "Strict"});
     public BooleanSetting fast = new BooleanSetting("Fast", "Improves the speed of the prediction calculations at the cost of stability.", new CategorySetting.Visibility(predictionCategory), false);
+    public BooleanSetting pingBypass = new BooleanSetting("PingBypass", "Bypasses ping by predicting entity IDs every tick and attacking preemptively.", new CategorySetting.Visibility(predictionCategory), false);
     public BooleanSetting antiKick = new BooleanSetting("AntiKick", "Prevents you from getting kicked by attacking invalid entity IDs.", new CategorySetting.Visibility(predictionCategory), false);
     public NumberSetting kickThreshold = new NumberSetting("KickThreshold", "Threshold", "The tick threshold for the kick prevention.", new BooleanSetting.Visibility(antiKick, true), 5, 1, 10);
 
@@ -158,9 +160,17 @@ public class AutoCrystalModule extends Module {
     private int highestID = -100000;
     private int kickTicks = 0;
 
+    private int grimTicks = 0;
+
     @SubscribeEvent
     public void onPlayerUpdate(PlayerUpdateEvent event) {
         if (mc.player == null || mc.world == null) return;
+
+        if (sequential.getValue().equalsIgnoreCase("Grim")) {
+            grimTicks++;
+            if (grimTicks < 2) return;
+            grimTicks = 0;
+        }
 
         attackedCrystals.entrySet().removeIf(entry -> System.currentTimeMillis() - entry.getValue() > Sydney.SERVER_MANAGER.getPing() * 2L);
         placedCrystals.entrySet().removeIf(entry -> System.currentTimeMillis() - entry.getValue() > Sydney.SERVER_MANAGER.getPing() * 2L + (20 - attackSpeed.getValue().floatValue()) * 50L);
@@ -193,6 +203,10 @@ public class AutoCrystalModule extends Module {
         else runnable.run();
 
         if (gameLoop.getValue()) return;
+
+        if (pingBypass.getValue()) {
+            runPingBypassPrediction();
+        }
 
         run();
     }
@@ -251,6 +265,38 @@ public class AutoCrystalModule extends Module {
         if (placeRunnable != null) placeRunnable.run();
     }
 
+    private void runPingBypassPrediction() {
+        if (!attack.getValue()) return;
+        if (antiKick.getValue() && ++kickTicks > kickThreshold.getValue().intValue()) {
+            kickTicks = 0;
+            return;
+        }
+
+        if (!fast.getValue()) {
+            for (Entity entity : mc.world.getEntities()) {
+                if (entity.getId() <= highestID) continue;
+                highestID = entity.getId();
+            }
+        }
+
+        int predCount = Math.min(predictions.getValue().intValue(), 3);
+        for (int i = 1; i <= predCount; ++i) {
+            int id = highestID + i;
+            Entity existing = mc.world.getEntityById(id);
+            if (existing != null && !(existing instanceof EndCrystalEntity)) continue;
+
+            PlayerInteractEntityC2SPacket packet = PlayerInteractEntityC2SPacket.attack(mc.player, mc.player.isSneaking());
+            try {
+                java.lang.reflect.Field field = PlayerInteractEntityC2SPacket.class.getDeclaredField(FabricLoader.getInstance().isDevelopmentEnvironment() ? "entityId" : "field_12870");
+                field.setAccessible(true);
+                field.setInt(packet, id);
+            } catch (Exception ignored) {}
+            mc.getNetworkHandler().sendPacket(packet);
+            attackedCrystals.put(id, System.currentTimeMillis());
+        }
+        mc.getNetworkHandler().sendPacket(new HandSwingC2SPacket(Hand.MAIN_HAND));
+    }
+
     @SubscribeEvent
     public void onEntitySpawn(EntitySpawnEvent event) {
         if (mc.player == null || mc.world == null) return;
@@ -274,7 +320,7 @@ public class AutoCrystalModule extends Module {
         attack(crystal);
 
         attackedSequentially = true;
-        if (sequential.getValue().equalsIgnoreCase("Strong")) {
+        if (sequential.getValue().equalsIgnoreCase("Strong") || sequential.getValue().equalsIgnoreCase("Grim")) {
             placeCrystals(true);
         }
     }
@@ -295,11 +341,10 @@ public class AutoCrystalModule extends Module {
         int previousSlot = mc.player.getInventory().selectedSlot;
         boolean switched = false;
 
-        if (!autoSwitch.getValue().equalsIgnoreCase("None") && slot == -1 && (mc.player.getMainHandStack().getItem() != Items.END_CRYSTAL && mc.player.getOffHandStack().getItem() != Items.END_CRYSTAL))
+        if (slot == -1 && (mc.player.getMainHandStack().getItem() != Items.END_CRYSTAL && mc.player.getOffHandStack().getItem() != Items.END_CRYSTAL))
             return;
 
-        PlaceTarget mineTarget = this.mineTarget == null ? null : this.mineTarget.clone();
-        if (mineTarget == null || (mineTarget.getPosition() != null && !minedPosition.equals(mineTarget.getException()))) mineTarget = calculatePlacements(minedPosition);
+        PlaceTarget mineTarget = calculatePlacements(minedPosition);
         if (mineTarget == null || mineTarget.getPosition() == null) {
             Sydney.RENDER_MANAGER.setRenderPosition(null);
             return;
@@ -315,6 +360,14 @@ public class AutoCrystalModule extends Module {
         if (rotate.getValue().equalsIgnoreCase("Normal")) Sydney.ROTATION_MANAGER.rotate(calculateRotations(Vec3d.ofCenter(position, 1)), this, Sydney.ROTATION_MANAGER.getModulePriority(this) + 1);
         if (!rotate.getValue().equalsIgnoreCase("None")) Sydney.ROTATION_MANAGER.packetRotate(RotationUtils.getRotations(Vec3d.ofCenter(position, 1)));
 
+        if (!mineTarget.getObstructions().isEmpty()) {
+            for (Entity obstruction : mineTarget.getObstructions()) {
+                if (!(obstruction instanceof EndCrystalEntity crystal) || !crystal.isAlive()) continue;
+                mc.player.networkHandler.sendPacket(PlayerInteractEntityC2SPacket.attack(crystal, mc.player.isSneaking()));
+                mc.player.networkHandler.sendPacket(new HandSwingC2SPacket(Hand.MAIN_HAND));
+            }
+        }
+
         for (Entity entity : mc.world.getOtherEntities(null, new Box(position.up())).stream().filter(entity -> entity instanceof EndCrystalEntity).toList()) {
             if (!rotate.getValue().equalsIgnoreCase("None")) Sydney.ROTATION_MANAGER.packetRotate(RotationUtils.getRotations(entity));
 
@@ -327,7 +380,7 @@ public class AutoCrystalModule extends Module {
         SpeedMineModule module = Sydney.MODULE_MANAGER.getModule(SpeedMineModule.class);
         boolean flag = module.switchReset.getValue() && (module.switchMode.getValue().equalsIgnoreCase("Normal") || module.switchMode.getValue().equalsIgnoreCase("AltSwap") || module.switchMode.getValue().equalsIgnoreCase("AltPickup"));
 
-        if (!autoSwitch.getValue().equalsIgnoreCase("None") &&  mc.player.getMainHandStack().getItem() != Items.END_CRYSTAL && mc.player.getOffHandStack().getItem() != Items.END_CRYSTAL) {
+        if (!autoSwitch.getValue().equalsIgnoreCase("None") && mc.player.getMainHandStack().getItem() != Items.END_CRYSTAL && mc.player.getOffHandStack().getItem() != Items.END_CRYSTAL) {
             InventoryUtils.switchSlot(flag ? "AltSwap" : autoSwitch.getValue(), slot, previousSlot);
             switched = true;
         }
@@ -462,7 +515,7 @@ public class AutoCrystalModule extends Module {
         int slot = InventoryUtils.findHotbar(Items.END_CRYSTAL);
         int previousSlot = mc.player.getInventory().selectedSlot;
 
-        if (!autoSwitch.getValue().equalsIgnoreCase("None") && slot == -1 && (mc.player.getMainHandStack().getItem() != Items.END_CRYSTAL && mc.player.getOffHandStack().getItem() != Items.END_CRYSTAL))
+        if (slot == -1 && (mc.player.getMainHandStack().getItem() != Items.END_CRYSTAL && mc.player.getOffHandStack().getItem() != Items.END_CRYSTAL))
             return;
 
         BlockPos position = placeTarget.getPosition();
@@ -488,7 +541,7 @@ public class AutoCrystalModule extends Module {
 
             if (rotate.getValue().equalsIgnoreCase("Packet")) Sydney.ROTATION_MANAGER.packetRotate(RotationUtils.getRotations(Vec3d.ofCenter(position, 1)));
 
-            if (mc.player.getMainHandStack().getItem() != Items.END_CRYSTAL && mc.player.getOffHandStack().getItem() != Items.END_CRYSTAL) {
+            if (!autoSwitch.getValue().equalsIgnoreCase("None") && mc.player.getMainHandStack().getItem() != Items.END_CRYSTAL && mc.player.getOffHandStack().getItem() != Items.END_CRYSTAL) {
                 InventoryUtils.switchSlot(autoSwitch.getValue(), slot, previousSlot);
                 switched = true;
             }
@@ -595,7 +648,7 @@ public class AutoCrystalModule extends Module {
     private PlaceTarget calculatePlacements(BlockPos exception) {
         if (!place.getValue()) return null;
 
-        if (shouldPause("Place") || ((autoSwitch.getValue().equalsIgnoreCase("None") || InventoryUtils.findHotbar(Items.END_CRYSTAL) == -1) && (mc.player.getMainHandStack().getItem() != Items.END_CRYSTAL && mc.player.getOffHandStack().getItem() != Items.END_CRYSTAL)))
+        if (shouldPause("Place") || (InventoryUtils.findHotbar(Items.END_CRYSTAL) == -1 && (mc.player.getMainHandStack().getItem() != Items.END_CRYSTAL && mc.player.getOffHandStack().getItem() != Items.END_CRYSTAL)))
             return null;
 
         List<PlayerEntity> players = getPlayers();
@@ -635,8 +688,8 @@ public class AutoCrystalModule extends Module {
                 if (damage < getMinimumDamage(player, minimumDamage.getValue().floatValue()) && damage < player.getHealth() + player.getAbsorptionAmount() && !(damage * (1.0f + lethalMultiplier.getValue().floatValue()) >= player.getHealth() + player.getAbsorptionAmount()))
                     continue;
 
-                if (exception == null && !obstructingCrystals.isEmpty()) {
-                    obstructions.add(obstructingCrystals.getFirst());
+                if (!obstructingCrystals.isEmpty()) {
+                    obstructions.addAll(obstructingCrystals);
                     break;
                 }
 
@@ -706,7 +759,8 @@ public class AutoCrystalModule extends Module {
         Hand hand = mc.player.getOffHandStack().getItem() == Items.END_CRYSTAL ? Hand.OFF_HAND : Hand.MAIN_HAND;
         Direction direction = WorldUtils.getClosestDirection(position, true);
 
-        mc.getNetworkHandler().sendPacket(new PlayerInteractBlockC2SPacket(hand, new BlockHitResult(WorldUtils.getHitVector(position, direction), direction, position, false), 0));
+        NetworkUtils.sendSequencedPacket(seq ->
+            new PlayerInteractBlockC2SPacket(hand, new BlockHitResult(WorldUtils.getHitVector(position, direction), direction, position, false), seq));
 
         switch (swing.getValue()) {
             case "Default" -> mc.player.swingHand(hand);

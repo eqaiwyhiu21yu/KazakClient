@@ -39,6 +39,7 @@ public class ColorSetting extends Setting {
 
     public java.awt.Color getColor() {
         if (isSync()) {
+            if (this == Sydney.MODULE_MANAGER.getModule(ColorModule.class).color) return value.getColor();
             return ColorUtils.getGlobalColor(getAlpha());
         } else {
             if (isRainbow()) {

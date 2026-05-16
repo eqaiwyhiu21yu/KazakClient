@@ -28,6 +28,7 @@ import net.minecraft.network.packet.c2s.play.ClientCommandC2SPacket;
 import net.minecraft.network.packet.c2s.play.HandSwingC2SPacket;
 import net.minecraft.network.packet.c2s.play.PlayerInteractBlockC2SPacket;
 import net.minecraft.network.packet.c2s.play.PlayerInteractEntityC2SPacket;
+import net.minecraft.network.packet.c2s.play.PlayerMoveC2SPacket;
 import net.minecraft.registry.RegistryKeys;
 import net.minecraft.registry.tag.FluidTags;
 import net.minecraft.util.Hand;
@@ -80,6 +81,7 @@ public class WorldUtils implements IMinecraft {
         if (sprint) mc.player.networkHandler.sendPacket(new ClientCommandC2SPacket(mc.player, ClientCommandC2SPacket.Mode.STOP_SPRINTING));
         if (sneak) mc.player.networkHandler.sendPacket(new ClientCommandC2SPacket(mc.player, ClientCommandC2SPacket.Mode.PRESS_SHIFT_KEY));
 
+        mc.player.networkHandler.sendPacket(new PlayerMoveC2SPacket.OnGroundOnly(mc.player.isOnGround(), mc.player.horizontalCollision));
         BlockHitResult blockHitResult = new BlockHitResult(vec3d, direction.getOpposite(), offsetPosition, false);
         NetworkUtils.sendSequencedPacket(sequence -> new PlayerInteractBlockC2SPacket(hand, blockHitResult, sequence));
         mc.getNetworkHandler().sendPacket(new HandSwingC2SPacket(hand));
@@ -112,13 +114,15 @@ public class WorldUtils implements IMinecraft {
     }
 
     public static void destroyCrystals(BlockPos position) {
-        List<Entity> surroundingCrystals = mc.world.getOtherEntities(null, new Box(position)).stream().filter(entity -> entity instanceof EndCrystalEntity).toList();
+        Box searchBox = new Box(position.add(-1, 0, -1)).union(new Box(position.add(2, 2, 2)));
+        List<Entity> surroundingCrystals = mc.world.getOtherEntities(null, searchBox).stream()
+                .filter(entity -> entity instanceof EndCrystalEntity).toList();
         if (surroundingCrystals.isEmpty()) return;
 
+        mc.player.networkHandler.sendPacket(new PlayerMoveC2SPacket.OnGroundOnly(mc.player.isOnGround(), mc.player.horizontalCollision));
         for (Entity entity : surroundingCrystals) {
             mc.player.networkHandler.sendPacket(PlayerInteractEntityC2SPacket.attack(entity, mc.player.isSneaking()));
             mc.player.networkHandler.sendPacket(new HandSwingC2SPacket(Hand.MAIN_HAND));
-            break;
         }
     }
 
