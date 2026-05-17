@@ -640,6 +640,18 @@ public class HUDModule extends Module {
 
         updateEditOverlay((float) getMouseX(), (float) getMouseY());
 
+        int winW = mc.getWindow().getScaledWidth();
+        int winH = mc.getWindow().getScaledHeight();
+        int gridSize = 20;
+        Color gridColor = new Color(255, 255, 255, 25);
+
+        for (int x = 0; x <= winW; x += gridSize) {
+            Renderer2D.renderQuad(context.getMatrices(), x, 0, x + 1, winH, gridColor);
+        }
+        for (int y = 0; y <= winH; y += gridSize) {
+            Renderer2D.renderQuad(context.getMatrices(), 0, y, winW, y + 1, gridColor);
+        }
+
         for (HudElement element : hudElements.values()) {
             if (element.getWidth() <= 0 || element.getHeight() <= 0) continue;
 
@@ -673,6 +685,10 @@ public class HUDModule extends Module {
                 Sydney.FONT_MANAGER.drawTextWithShadow(context, pos, sx, sy + h + 4, Color.GRAY);
             }
         }
+
+        String hint = "Drag to move | Right-click: toggle | Press F4 to exit";
+        int hintW = Sydney.FONT_MANAGER.getWidth(hint);
+        Sydney.FONT_MANAGER.drawTextWithShadow(context, hint, winW / 2 - hintW / 2, winH - 12, new Color(150, 150, 150));
     }
 
     private void drawModuleText(Module module, DrawContext context, String text, float x, float y) {

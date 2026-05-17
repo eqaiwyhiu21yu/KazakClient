@@ -2,7 +2,6 @@ package me.aidan.sydney.modules.impl.combat;
 
 import me.aidan.sydney.Sydney;
 import me.aidan.sydney.events.SubscribeEvent;
-import me.aidan.sydney.events.impl.PacketReceiveEvent;
 import me.aidan.sydney.events.impl.PlayerMineEvent;
 import me.aidan.sydney.events.impl.PlayerUpdateEvent;
 import me.aidan.sydney.modules.Module;
@@ -18,7 +17,6 @@ import me.aidan.sydney.utils.system.ThreadExecutor;
 import me.aidan.sydney.utils.system.Timer;
 import net.minecraft.entity.Entity;
 import net.minecraft.entity.player.PlayerEntity;
-import net.minecraft.network.packet.s2c.play.EntitySpawnS2CPacket;
 import net.minecraft.util.Hand;
 import net.minecraft.util.math.*;
 
@@ -36,7 +34,6 @@ public class BlockerModule extends Module {
     public NumberSetting range = new NumberSetting("Range", "The maximum range at which the blocks will be placed at.", 5.0, 0.0, 12.0);
     public BooleanSetting rotate = new BooleanSetting("Rotate", "Sends a packet rotation whenever placing a block.", true);
     public BooleanSetting strictDirection = new BooleanSetting("StrictDirection", "Only places using directions that face you.", false);
-    public BooleanSetting predict = new BooleanSetting("Predict", "Predicts enemy crystal placements and preemptively places obsidian.", true);
     public BooleanSetting crystalDestruction = new BooleanSetting("CrystalDestruction", "Destroys any crystals that interfere with block placement.", true);
     public BooleanSetting whileEating = new BooleanSetting("WhileEating", "Places blocks normally while eating.", true);
 
@@ -72,7 +69,7 @@ public class BlockerModule extends Module {
             HashSet<BlockPos> feetPositions = HoleUtils.getFeetPositions(mc.player, true, false, false);
             List<BlockPos> insidePositions = HoleUtils.getInsidePositions(mc.player);
 
-            if (mine != null && mine.timer().hasTimeElapsed(Math.max(mine.breakTime() - (predict.getValue() ? 600L : 200L), 0L))) {
+            if (mine != null && mine.timer().hasTimeElapsed(Math.max(mine.breakTime() - 200L, 0L))) {
                 BlockPos position = mine.position();
                 if (mine.type() == MineType.FEET && feet.getValue()) {
                     if (feetPositions.contains(mine.position())) {
@@ -98,33 +95,6 @@ public class BlockerModule extends Module {
             targetPositions.removeIf(position -> mc.player.squaredDistanceTo(Vec3d.ofCenter(position.position())) > MathHelper.square(range.getValue().doubleValue()));
 
             targetPositions.removeIf(position -> !feetPositions.contains(position.original()) && !feetPositions.contains(position.original().down()) && !insidePositions.contains(position.original().down().down()));
-
-            if (targetPositions.isEmpty() && predict.getValue()) {
-                HashSet<BlockPos> feetPos = HoleUtils.getFeetPositions(mc.player, true, false, false);
-                for (PlayerEntity player : mc.world.getPlayers()) {
-                    if (player == mc.player || !player.isAlive()) continue;
-                    if (Sydney.FRIEND_MANAGER.contains(player.getName().getString())) continue;
-
-                    Vec3d lookVec = player.getRotationVec(1.0f);
-                    Vec3d eyePos = player.getEyePos();
-
-                    for (BlockPos fp : feetPos) {
-                        if (targetPositions.size() >= limit.getValue().intValue() * 2) break;
-                        if (mc.player.squaredDistanceTo(Vec3d.ofCenter(fp)) > MathHelper.square(range.getValue().doubleValue())) continue;
-
-                        Vec3d center = Vec3d.ofCenter(fp);
-                        Vec3d toBlock = center.subtract(eyePos).normalize();
-                        double dot = lookVec.dotProduct(toBlock);
-                        double dist = eyePos.squaredDistanceTo(center);
-
-                        if (dot > 0.95 && dist < MathHelper.square(6.0)) {
-                            BlockPos placePos = fp.up();
-                            if (WorldUtils.isPlaceable(placePos))
-                                targetPositions.addIfAbsent(new Position(placePos, placePos));
-                        }
-                    }
-                }
-            }
 
             if (targetPositions.isEmpty()) return;
 
@@ -156,23 +126,6 @@ public class BlockerModule extends Module {
 
         if (asynchronous.getValue()) ThreadExecutor.execute(runnable);
         else runnable.run();
-    }
-
-    @SubscribeEvent
-    public void onPacketReceive(PacketReceiveEvent event) {
-        if (!predict.getValue() || mc.player == null || mc.world == null) return;
-        if (!(event.getPacket() instanceof EntitySpawnS2CPacket packet && packet.getEntityType().equals(net.minecraft.entity.EntityType.END_CRYSTAL))) return;
-
-        BlockPos crystalPos = BlockPos.ofFloored(packet.getX(), packet.getY(), packet.getZ()).down();
-
-        HashSet<BlockPos> feetPositions = HoleUtils.getFeetPositions(mc.player, true, false, false);
-        List<BlockPos> insidePositions = HoleUtils.getInsidePositions(mc.player);
-
-        if (feetPositions.contains(crystalPos) || insidePositions.contains(crystalPos.down())) {
-            BlockPos placePos = crystalPos.up();
-            if (!targetPositions.contains(new Position(placePos, placePos)))
-                targetPositions.addIfAbsent(new Position(placePos, placePos));
-        }
     }
 
     @SubscribeEvent

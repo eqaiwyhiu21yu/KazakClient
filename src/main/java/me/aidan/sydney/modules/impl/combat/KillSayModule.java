@@ -20,7 +20,7 @@ import java.util.concurrent.ConcurrentLinkedQueue;
 
 @RegisterModule(name = "KillSay", description = "Automatically sends a message when you kill someone.", category = Module.Category.COMBAT)
 public class KillSayModule extends Module {
-    private final String[] KILL_MESSAGES = {"Sit [username], Kazak Client owns me and all!", "[username] I killed you with the power of Kazak Client!", "Sorry [username], get good get Kazak Client!", "I just killed [username] thanks to Kazak Client!"};
+    private final String[] KILL_MESSAGES = {"Very Nice [username], Kazak Client number one!", "[username] I killed you of Kazak Client!", "Sorry NOT! [username], get bald use Kazak Client!", "I just killed [username] Kazak Client!"};
 
     public BooleanSetting kills = new BooleanSetting("Kills", "Sends a message when you kill someone.", true);
     public BooleanSetting pops = new BooleanSetting("Pops", "Sends a message when you pop someone.", false);
